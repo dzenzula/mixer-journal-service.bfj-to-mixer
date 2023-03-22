@@ -1,0 +1,7 @@
+{
+    "apiUrl": "https://krr-tst-padev02.europe.mittalco.com/blast-furnace-journal-webapi/api",
+    "apiGetLastJournals": "https://krr-tst-padev02.europe.mittalco.com/blast-furnace-journal-webapi/api/Journals/GetLastJournals/",
+    "apiGetJournal": "https://krr-tst-padev02.europe.mittalco.com/blast-furnace-journal-webapi/api/Journals/GetJournal/",
+    "apiPostAuth": "https://krr-tst-padev02.europe.mittalco.com/blast-furnace-journal-webapi/api/Authorization/LogInAuthorization",
+    "apiGetListBF": "https://krr-tst-padev02.europe.mittalco.com/blast-furnace-journal-webapi/api/Utility/GetListBF"
+}
