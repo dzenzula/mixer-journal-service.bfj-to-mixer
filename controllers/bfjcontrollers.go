@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"main/cache"
 	"main/helpers"
 	"main/models"
 	"net/http"
@@ -14,8 +15,8 @@ import (
 	"strconv"
 )
 
-var configAPI *models.ConfigAPI = helpers.LoadAPIConfig("models/configAPI.json")
-var configPath *models.ConfigPath = helpers.LoadPathConfig("models/configPaths.json")
+var configAPI *models.ConfigAPI = helpers.LoadAPIConfig("models/json/configAPI.json")
+var configPath *models.ConfigPath = helpers.LoadPathConfig("models/json/configPaths.json")
 var client = &http.Client{}
 
 func GetListBf() (nBF []int) {
@@ -45,6 +46,9 @@ func GetListBf() (nBF []int) {
 func GetLastJournalsData(nBF []int) (ids map[int][]int) {
 	var data models.Journals
 	ids = map[int][]int{}
+
+	var yaml *cache.Data = cache.ReadYAMLFile(configPath.CachePath)
+
 	for _, n := range nBF {
 		req, err := http.NewRequest("GET", configAPI.ApiGetLastJournals+strconv.Itoa(n), nil)
 		if err != nil {
@@ -63,21 +67,24 @@ func GetLastJournalsData(nBF []int) (ids map[int][]int) {
 
 		err = json.Unmarshal(body, &data)
 		if err != nil {
-			fmt.Println("Error decoding JSON string:", err)
+			log.Println("Error decoding JSON string:", err)
 			return nil
 		}
 
-		out, err := json.MarshalIndent(data, "", "    ")
-		if err != nil {
-			fmt.Println("Error decoding JSON string:", err)
-			return nil
-		}
+		// out, err := json.MarshalIndent(data, "", "    ")
+		// if err != nil {
+		// 	log.Println("Error decoding JSON string:", err)
+		// 	return nil
+		// }
 
 		for _, id := range data.DataJournals {
-			ids[n] = append(ids[n], id.ID)
+			if !cache.IdExists(yaml, id.ID) {
+				cache.WriteYAMLFile(configPath.CachePath, yaml, id.ID)
+				ids[n] = append(ids[n], id.ID)
+			}
 		}
 
-		fmt.Println(string(out))
+		// fmt.Println(string(out))
 		defer resp.Body.Close()
 	}
 
@@ -85,17 +92,17 @@ func GetLastJournalsData(nBF []int) (ids map[int][]int) {
 }
 
 func GetJournalData(ids map[int][]int) {
+	cookies, authError := authorize()
 	for key, values := range ids {
 		for _, id := range values {
-			cookies, authError := authorize()
 			if authError != nil {
-				fmt.Println("Authorization error. \n", authError)
+				log.Println("Authorization error. \n", authError)
 				return
 			}
 
 			req, err := http.NewRequest("GET", configAPI.ApiGetjournal+strconv.Itoa(id)+"&"+strconv.Itoa(key), nil)
 			if err != nil {
-				panic(err.Error())
+				log.Println(err.Error())
 			}
 
 			countCookies := len(cookies)
@@ -105,28 +112,28 @@ func GetJournalData(ids map[int][]int) {
 
 			resp, err := client.Do(req)
 			if err != nil {
-				panic(err.Error())
+				log.Println(err.Error())
 			}
 
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
-				panic(err.Error())
+				log.Println(err.Error())
 			}
 
 			var data models.Journal
 			err = json.Unmarshal(body, &data)
 			if err != nil {
-				fmt.Println("Error decoding JSON string:", err)
+				log.Println("Error decoding JSON string:", err)
 				return
 			}
 
-			out, err := json.MarshalIndent(data, "", "    ")
-			if err != nil {
-				fmt.Println("Error decoding JSON string:", err)
-				return
-			}
+			// out, err := json.MarshalIndent(data, "", "    ")
+			// if err != nil {
+			// 	log.Println("Error decoding JSON string:", err)
+			// 	return
+			// }
 
-			fmt.Println(string(out))
+			// fmt.Println(string(out))
 			resp.Body.Close()
 		}
 	}
@@ -135,14 +142,13 @@ func GetJournalData(ids map[int][]int) {
 func authorize() ([]*http.Cookie, error) {
 	file, err := os.Open(configPath.AuthPath)
 	if err != nil {
-		fmt.Println(err.Error())
-		panic("Can't find a file.")
+		log.Println(err.Error())
 	}
 	defer file.Close()
 
 	fileContent, err := io.ReadAll(file)
 	if err != nil {
-		panic("Can't read the file.")
+		log.Println("Can't read the file.")
 	}
 
 	req, err := http.Post(configAPI.ApiPostAuth, "application/json", bytes.NewBuffer(fileContent))
