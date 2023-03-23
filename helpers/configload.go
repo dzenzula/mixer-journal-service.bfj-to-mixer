@@ -2,18 +2,17 @@ package helpers
 
 import (
 	"encoding/json"
-	"main/models"
 	"os"
 )
 
-func LoadAPIConfig(filePath string) *models.ConfigAPI {
+func LoadAPIConfig(filePath string) *ConfigAPI {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil
 	}
 	defer file.Close()
 
-	config := &models.ConfigAPI{}
+	config := &ConfigAPI{}
 	decoder := json.NewDecoder(file)
 	err = decoder.Decode(config)
 	if err != nil {
@@ -23,14 +22,14 @@ func LoadAPIConfig(filePath string) *models.ConfigAPI {
 	return config
 }
 
-func LoadPathConfig(filePath string) *models.ConfigPath {
+func LoadPathConfig(filePath string) *ConfigPath {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil
 	}
 	defer file.Close()
 
-	config := &models.ConfigPath{}
+	config := &ConfigPath{}
 	decoder := json.NewDecoder(file)
 	err = decoder.Decode(config)
 	if err != nil {

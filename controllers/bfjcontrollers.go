@@ -15,12 +15,10 @@ import (
 	"strconv"
 )
 
-var configAPI *models.ConfigAPI = helpers.LoadAPIConfig("models/json/configAPI.json")
-var configPath *models.ConfigPath = helpers.LoadPathConfig("models/json/configPaths.json")
 var client = &http.Client{}
 
 func GetListBf() (nBF []int) {
-	url := configAPI.ApiGetListBF
+	url := helpers.CfgAPI.ApiGetListBF
 	req, getListOfBFErr := http.Get(url)
 	if getListOfBFErr != nil {
 		log.Println(getListOfBFErr.Error())
@@ -47,10 +45,10 @@ func GetLastJournalsData(nBF []int) (ids map[int][]int) {
 	var data models.Journals
 	ids = map[int][]int{}
 
-	var yaml *cache.Data = cache.ReadYAMLFile(configPath.CachePath)
+	var yaml *cache.Data = cache.ReadYAMLFile(helpers.CfgPath.CachePath)
 
 	for _, n := range nBF {
-		req, err := http.NewRequest("GET", configAPI.ApiGetLastJournals+strconv.Itoa(n), nil)
+		req, err := http.NewRequest("GET", fmt.Sprintf(helpers.CfgAPI.ApiGetLastJournals, strconv.Itoa(n)), nil)
 		if err != nil {
 			log.Println(err.Error())
 		}
@@ -79,7 +77,7 @@ func GetLastJournalsData(nBF []int) (ids map[int][]int) {
 
 		for _, id := range data.DataJournals {
 			if !cache.IdExists(yaml, id.ID) {
-				cache.WriteYAMLFile(configPath.CachePath, yaml, id.ID)
+				cache.WriteYAMLFile(helpers.CfgPath.CachePath, yaml, id.ID)
 				ids[n] = append(ids[n], id.ID)
 			}
 		}
@@ -100,7 +98,7 @@ func GetJournalData(ids map[int][]int) {
 				return
 			}
 
-			req, err := http.NewRequest("GET", configAPI.ApiGetjournal+strconv.Itoa(id)+"&"+strconv.Itoa(key), nil)
+			req, err := http.NewRequest("GET", fmt.Sprintf(helpers.CfgAPI.ApiGetjournal, strconv.Itoa(id), strconv.Itoa(key)), nil)
 			if err != nil {
 				log.Println(err.Error())
 			}
@@ -127,20 +125,20 @@ func GetJournalData(ids map[int][]int) {
 				return
 			}
 
-			// out, err := json.MarshalIndent(data, "", "    ")
-			// if err != nil {
-			// 	log.Println("Error decoding JSON string:", err)
-			// 	return
-			// }
+			out, err := json.MarshalIndent(data, "", "    ")
+			if err != nil {
+				log.Println("Error decoding JSON string:", err)
+				return
+			}
 
-			// fmt.Println(string(out))
+			fmt.Println(string(out))
 			resp.Body.Close()
 		}
 	}
 }
 
 func authorize() ([]*http.Cookie, error) {
-	file, err := os.Open(configPath.AuthPath)
+	file, err := os.Open(helpers.CfgPath.AuthPath)
 	if err != nil {
 		log.Println(err.Error())
 	}
@@ -151,7 +149,7 @@ func authorize() ([]*http.Cookie, error) {
 		log.Println("Can't read the file.")
 	}
 
-	req, err := http.Post(configAPI.ApiPostAuth, "application/json", bytes.NewBuffer(fileContent))
+	req, err := http.Post(helpers.CfgAPI.ApiPostAuth, "application/json", bytes.NewBuffer(fileContent))
 	if err != nil {
 		return nil, err
 	} else if req.StatusCode != http.StatusOK {
