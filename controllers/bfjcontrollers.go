@@ -91,13 +91,12 @@ func GetLastJournalsData(nBF []int) (ids map[int][]int) {
 
 func GetJournalData(ids map[int][]int) {
 	cookies, authError := authorize()
+	if authError != nil {
+		log.Println("Authorization error. \n", authError)
+		return
+	}
 	for key, values := range ids {
 		for _, id := range values {
-			if authError != nil {
-				log.Println("Authorization error. \n", authError)
-				return
-			}
-
 			req, err := http.NewRequest("GET", fmt.Sprintf(helpers.CfgAPI.ApiGetjournal, strconv.Itoa(id), strconv.Itoa(key)), nil)
 			if err != nil {
 				log.Println(err.Error())
@@ -132,9 +131,141 @@ func GetJournalData(ids map[int][]int) {
 			}
 
 			fmt.Println(string(out))
-			resp.Body.Close()
+			defer resp.Body.Close()
 		}
 	}
+}
+
+func GetChemCoxes(id int) {
+	cookies, authError := authorize()
+	if authError != nil {
+		log.Println("Authorization error. \n", authError)
+		return
+	}
+
+	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.CfgAPI.ApiGetChemCoxes, strconv.Itoa(id)), nil)
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	countCookies := len(cookies)
+	for i := 0; i < countCookies; i++ {
+		req.AddCookie(cookies[i])
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err.Error())
+	}
+	defer resp.Body.Close()
+
+	var data models.ChemCoxe
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		log.Println("Error decoding JSON string:", err)
+		return
+	}
+
+	out, err := json.MarshalIndent(data, "", "    ")
+	if err != nil {
+		log.Println("Error decoding JSON string:", err)
+		return
+	}
+
+	fmt.Println(string(out))
+}
+
+func GetChemicalSlags(id int) {
+	cookies, authError := authorize()
+	if authError != nil {
+		log.Println("Authorization error. \n", authError)
+		return
+	}
+
+	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.CfgAPI.ApiGetChemicalsSlags, strconv.Itoa(id)), nil)
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	countCookies := len(cookies)
+	for i := 0; i < countCookies; i++ {
+		req.AddCookie(cookies[i])
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err.Error())
+	}
+	defer resp.Body.Close()
+
+	var data models.ChemicalSlag
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		log.Println("Error decoding JSON string:", err)
+		return
+	}
+
+	out, err := json.MarshalIndent(data, "", "    ")
+	if err != nil {
+		log.Println("Error decoding JSON string:", err)
+		return
+	}
+
+	fmt.Println(string(out))
+}
+
+func GetChemMaterials(id int) {
+	cookies, authError := authorize()
+	if authError != nil {
+		log.Println("Authorization error. \n", authError)
+		return
+	}
+
+	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.CfgAPI.ApiGetChemMaterials, strconv.Itoa(id)), nil)
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	countCookies := len(cookies)
+	for i := 0; i < countCookies; i++ {
+		req.AddCookie(cookies[i])
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err.Error())
+	}
+	defer resp.Body.Close()
+
+	var data models.ChemMaterial
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		log.Println("Error decoding JSON string:", err)
+		return
+	}
+
+	out, err := json.MarshalIndent(data, "", "    ")
+	if err != nil {
+		log.Println("Error decoding JSON string:", err)
+		return
+	}
+
+	fmt.Println(string(out))
 }
 
 func authorize() ([]*http.Cookie, error) {
