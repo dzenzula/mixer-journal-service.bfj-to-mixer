@@ -4,7 +4,8 @@ type ConfigAPI struct {
 	ApiUrl               string `json:"apiUrl"`
 	ApiGetLastJournals   string `json:"apiGetLastJournals"`
 	ApiGetjournal        string `json:"apiGetJournal"`
-	ApiPostAuth          string `json:"apiPostAuth"`
+	ApiPostAuthTest      string `json:"apiPostAuthTest"`
+	ApiPostAuthProd      string `json:"apiPostAuthProd"`
 	ApiGetListBF         string `json:"apiGetListBF"`
 	ApiGetChemCoxes      string `json:"apiGetChemCoxes"`
 	ApiGetChemicalsSlags string `json:"apiGetChemicalsSlags"`

@@ -89,8 +89,8 @@ func GetLastJournalsData(nBF []int) (ids map[int][]int) {
 	return ids
 }
 
-func GetJournalData(ids map[int][]int) {
-	cookies, authError := authorize()
+func GetJournalDatas(ids map[int][]int) {
+	cookies, authError := authorizeTest()
 	if authError != nil {
 		log.Println("Authorization error. \n", authError)
 		return
@@ -136,8 +136,54 @@ func GetJournalData(ids map[int][]int) {
 	}
 }
 
+func GetJournalData(nBF int, id int) (idJournal int) {
+	cookies, authError := authorizeTest()
+	if authError != nil {
+		log.Println("Authorization error. \n", authError)
+		return
+	}
+
+	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.CfgAPI.ApiGetjournal, strconv.Itoa(id), strconv.Itoa(nBF)), nil)
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	countCookies := len(cookies)
+	for i := 0; i < countCookies; i++ {
+		req.AddCookie(cookies[i])
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	var data models.Journal
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		log.Println("Error decoding JSON string:", err)
+		return
+	}
+
+	out, err := json.MarshalIndent(data, "", "    ")
+	if err != nil {
+		log.Println("Error decoding JSON string:", err)
+		return
+	}
+
+	fmt.Println(string(out))
+	defer resp.Body.Close()
+
+	return data.DataJournals.ID
+}
+
 func GetChemCoxes(id int) {
-	cookies, authError := authorize()
+	cookies, authError := authorizeProd()
 	if authError != nil {
 		log.Println("Authorization error. \n", authError)
 		return
@@ -164,7 +210,7 @@ func GetChemCoxes(id int) {
 	}
 	defer resp.Body.Close()
 
-	var data models.ChemCoxe
+	var data []models.ChemCoxe
 	err = json.Unmarshal(body, &data)
 	if err != nil {
 		log.Println("Error decoding JSON string:", err)
@@ -181,7 +227,7 @@ func GetChemCoxes(id int) {
 }
 
 func GetChemicalSlags(id int) {
-	cookies, authError := authorize()
+	cookies, authError := authorizeProd()
 	if authError != nil {
 		log.Println("Authorization error. \n", authError)
 		return
@@ -225,7 +271,7 @@ func GetChemicalSlags(id int) {
 }
 
 func GetChemMaterials(id int) {
-	cookies, authError := authorize()
+	cookies, authError := authorizeProd()
 	if authError != nil {
 		log.Println("Authorization error. \n", authError)
 		return
@@ -252,7 +298,7 @@ func GetChemMaterials(id int) {
 	}
 	defer resp.Body.Close()
 
-	var data models.ChemMaterial
+	var data []models.ChemMaterial
 	err = json.Unmarshal(body, &data)
 	if err != nil {
 		log.Println("Error decoding JSON string:", err)
@@ -268,7 +314,7 @@ func GetChemMaterials(id int) {
 	fmt.Println(string(out))
 }
 
-func authorize() ([]*http.Cookie, error) {
+func authorizeTest() ([]*http.Cookie, error) {
 	file, err := os.Open(helpers.CfgPath.AuthPath)
 	if err != nil {
 		log.Println(err.Error())
@@ -280,7 +326,34 @@ func authorize() ([]*http.Cookie, error) {
 		log.Println("Can't read the file.")
 	}
 
-	req, err := http.Post(helpers.CfgAPI.ApiPostAuth, "application/json", bytes.NewBuffer(fileContent))
+	req, err := http.Post(helpers.CfgAPI.ApiPostAuthTest, "application/json", bytes.NewBuffer(fileContent))
+	if err != nil {
+		return nil, err
+	} else if req.StatusCode != http.StatusOK {
+		bodyBytes, readAuthApiHttpBodyError := io.ReadAll(req.Body)
+		if readAuthApiHttpBodyError != nil {
+			fmt.Println("Error reading the response body of a rejected authorization request.\n", readAuthApiHttpBodyError)
+			return nil, readAuthApiHttpBodyError
+		}
+		return nil, errors.New("Authorization error.\n" + req.Status + " " + string(bodyBytes))
+	}
+
+	return req.Cookies(), nil
+}
+
+func authorizeProd() ([]*http.Cookie, error) {
+	file, err := os.Open(helpers.CfgPath.AuthPath)
+	if err != nil {
+		log.Println(err.Error())
+	}
+	defer file.Close()
+
+	fileContent, err := io.ReadAll(file)
+	if err != nil {
+		log.Println("Can't read the file.")
+	}
+
+	req, err := http.Post(helpers.CfgAPI.ApiPostAuthProd, "application/json", bytes.NewBuffer(fileContent))
 	if err != nil {
 		return nil, err
 	} else if req.StatusCode != http.StatusOK {

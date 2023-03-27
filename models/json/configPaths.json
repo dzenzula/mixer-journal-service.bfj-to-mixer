@@ -1,5 +1,5 @@
 {
     "configAPIPath": "models/json/configAPIPath.json",
     "cachePath": "cache/cache.yaml",
-    "authPath": "models/auth.json"
+    "authPath": "models/json/auth.json"
 }

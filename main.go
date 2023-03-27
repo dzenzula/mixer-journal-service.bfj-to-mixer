@@ -2,15 +2,12 @@ package main
 
 import (
 	"fmt"
-
-	//"main/cache"
 	"main/controllers"
 	"time"
 )
 
 func main() {
 	var nBF []int = controllers.GetListBf()
-	// cache.WriteYAMLFile(configPath.CachePath, yaml, 4)
 
 	duration := time.Until(time.Now().Truncate(time.Minute).Add(time.Minute)) // Calculate the duration until the next minute starts
 	checktime := time.Time{}.Add(duration)
@@ -23,7 +20,17 @@ func main() {
 		select {
 		case tm := <-minuteTick:
 			ids := controllers.GetLastJournalsData(nBF)
-			controllers.GetJournalData(ids)
+
+			for key, values := range ids {
+				for _, id := range values {
+					idJournal := controllers.GetJournalData(key, id)
+					controllers.GetChemCoxes(idJournal)
+					controllers.GetChemMaterials(idJournal)
+					controllers.GetChemicalSlags(idJournal)
+				}
+			}
+
+			//controllers.GetJournalDatas(ids)
 			fmt.Println(tm)
 		}
 	}
