@@ -19,4 +19,4 @@ type ConfigPath struct {
 }
 
 var CfgPath *ConfigPath = LoadPathConfig("models/json/configPaths.json")
-var CfgAPI *ConfigAPI = LoadAPIConfig("models/json/configAPI.json")
+var CfgAPI *ConfigAPI = LoadAPIConfig("models/json/configBFJAPI.prod.json")

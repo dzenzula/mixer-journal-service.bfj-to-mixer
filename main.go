@@ -2,11 +2,17 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"main/controllers"
 	"time"
 )
 
 func main() {
+	cookies, authError := controllers.AuthorizeProd()
+	if authError != nil {
+		log.Println("Authorization error. \n", authError)
+	}
+
 	var nBF []int = controllers.GetListBf()
 
 	duration := time.Until(time.Now().Truncate(time.Minute).Add(time.Minute)) // Calculate the duration until the next minute starts
@@ -23,10 +29,10 @@ func main() {
 
 			for key, values := range ids {
 				for _, id := range values {
-					idJournal := controllers.GetJournalData(key, id)
-					controllers.GetChemCoxes(idJournal)
-					controllers.GetChemMaterials(idJournal)
-					controllers.GetChemicalSlags(idJournal)
+					idJournal := controllers.GetJournalData(key, id, cookies)
+					controllers.GetChemCoxes(idJournal, cookies)
+					controllers.GetChemMaterials(idJournal, cookies)
+					controllers.GetChemicalSlags(idJournal, cookies)
 				}
 			}
 

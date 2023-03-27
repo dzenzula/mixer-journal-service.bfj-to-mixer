@@ -89,8 +89,8 @@ func GetLastJournalsData(nBF []int) (ids map[int][]int) {
 	return ids
 }
 
-func GetJournalDatas(ids map[int][]int) {
-	cookies, authError := authorizeTest()
+func GetJournalDatas(ids map[int][]int, countCookies int) {
+	cookies, authError := AuthorizeProd()
 	if authError != nil {
 		log.Println("Authorization error. \n", authError)
 		return
@@ -102,7 +102,6 @@ func GetJournalDatas(ids map[int][]int) {
 				log.Println(err.Error())
 			}
 
-			countCookies := len(cookies)
 			for i := 0; i < countCookies; i++ {
 				req.AddCookie(cookies[i])
 			}
@@ -136,13 +135,7 @@ func GetJournalDatas(ids map[int][]int) {
 	}
 }
 
-func GetJournalData(nBF int, id int) (idJournal int) {
-	cookies, authError := authorizeTest()
-	if authError != nil {
-		log.Println("Authorization error. \n", authError)
-		return
-	}
-
+func GetJournalData(nBF int, id int, cookies []*http.Cookie) (idJournal int) {
 	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.CfgAPI.ApiGetjournal, strconv.Itoa(id), strconv.Itoa(nBF)), nil)
 	if err != nil {
 		log.Println(err.Error())
@@ -156,6 +149,13 @@ func GetJournalData(nBF int, id int) (idJournal int) {
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Println(err.Error())
+	} else if resp.StatusCode != http.StatusOK {
+		cookies, authError := AuthorizeProd()
+		if authError != nil {
+			log.Println("Failed to get new cookies:", authError)
+			return
+		}
+		return GetJournalData(nBF, id, cookies)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -182,13 +182,7 @@ func GetJournalData(nBF int, id int) (idJournal int) {
 	return data.DataJournals.ID
 }
 
-func GetChemCoxes(id int) {
-	cookies, authError := authorizeProd()
-	if authError != nil {
-		log.Println("Authorization error. \n", authError)
-		return
-	}
-
+func GetChemCoxes(id int, cookies []*http.Cookie) (chemCoxes []models.ChemCoxe) {
 	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.CfgAPI.ApiGetChemCoxes, strconv.Itoa(id)), nil)
 	if err != nil {
 		log.Println(err.Error())
@@ -202,6 +196,13 @@ func GetChemCoxes(id int) {
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Println(err.Error())
+	} else if resp.StatusCode != http.StatusOK {
+		cookies, authError := AuthorizeProd()
+		if authError != nil {
+			log.Println("Failed to get new cookies:", authError)
+			return
+		}
+		return GetChemCoxes(id, cookies)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -224,15 +225,10 @@ func GetChemCoxes(id int) {
 	}
 
 	fmt.Println(string(out))
+	return data
 }
 
-func GetChemicalSlags(id int) {
-	cookies, authError := authorizeProd()
-	if authError != nil {
-		log.Println("Authorization error. \n", authError)
-		return
-	}
-
+func GetChemicalSlags(id int, cookies []*http.Cookie) (chemicalSlags []models.ChemicalSlag) {
 	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.CfgAPI.ApiGetChemicalsSlags, strconv.Itoa(id)), nil)
 	if err != nil {
 		log.Println(err.Error())
@@ -246,6 +242,13 @@ func GetChemicalSlags(id int) {
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Println(err.Error())
+	} else if resp.StatusCode != http.StatusOK {
+		cookies, authError := AuthorizeProd()
+		if authError != nil {
+			log.Println("Failed to get new cookies:", authError)
+			return
+		}
+		return GetChemicalSlags(id, cookies)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -254,7 +257,7 @@ func GetChemicalSlags(id int) {
 	}
 	defer resp.Body.Close()
 
-	var data models.ChemicalSlag
+	var data []models.ChemicalSlag
 	err = json.Unmarshal(body, &data)
 	if err != nil {
 		log.Println("Error decoding JSON string:", err)
@@ -268,15 +271,10 @@ func GetChemicalSlags(id int) {
 	}
 
 	fmt.Println(string(out))
+	return data
 }
 
-func GetChemMaterials(id int) {
-	cookies, authError := authorizeProd()
-	if authError != nil {
-		log.Println("Authorization error. \n", authError)
-		return
-	}
-
+func GetChemMaterials(id int, cookies []*http.Cookie) (chemicalMaterials []models.ChemMaterial) {
 	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.CfgAPI.ApiGetChemMaterials, strconv.Itoa(id)), nil)
 	if err != nil {
 		log.Println(err.Error())
@@ -290,6 +288,13 @@ func GetChemMaterials(id int) {
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Println(err.Error())
+	} else if resp.StatusCode != http.StatusOK {
+		cookies, authError := AuthorizeProd()
+		if authError != nil {
+			log.Println("Failed to get new cookies:", authError)
+			return
+		}
+		return GetChemMaterials(id, cookies)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -312,36 +317,37 @@ func GetChemMaterials(id int) {
 	}
 
 	fmt.Println(string(out))
+	return data
 }
 
-func authorizeTest() ([]*http.Cookie, error) {
-	file, err := os.Open(helpers.CfgPath.AuthPath)
-	if err != nil {
-		log.Println(err.Error())
-	}
-	defer file.Close()
+// func authorizeTest() ([]*http.Cookie, error) {
+// 	file, err := os.Open(helpers.CfgPath.AuthPath)
+// 	if err != nil {
+// 		log.Println(err.Error())
+// 	}
+// 	defer file.Close()
 
-	fileContent, err := io.ReadAll(file)
-	if err != nil {
-		log.Println("Can't read the file.")
-	}
+// 	fileContent, err := io.ReadAll(file)
+// 	if err != nil {
+// 		log.Println("Can't read the file.")
+// 	}
 
-	req, err := http.Post(helpers.CfgAPI.ApiPostAuthTest, "application/json", bytes.NewBuffer(fileContent))
-	if err != nil {
-		return nil, err
-	} else if req.StatusCode != http.StatusOK {
-		bodyBytes, readAuthApiHttpBodyError := io.ReadAll(req.Body)
-		if readAuthApiHttpBodyError != nil {
-			fmt.Println("Error reading the response body of a rejected authorization request.\n", readAuthApiHttpBodyError)
-			return nil, readAuthApiHttpBodyError
-		}
-		return nil, errors.New("Authorization error.\n" + req.Status + " " + string(bodyBytes))
-	}
+// 	req, err := http.Post(helpers.CfgAPI.ApiPostAuthTest, "application/json", bytes.NewBuffer(fileContent))
+// 	if err != nil {
+// 		return nil, err
+// 	} else if req.StatusCode != http.StatusOK {
+// 		bodyBytes, readAuthApiHttpBodyError := io.ReadAll(req.Body)
+// 		if readAuthApiHttpBodyError != nil {
+// 			fmt.Println("Error reading the response body of a rejected authorization request.\n", readAuthApiHttpBodyError)
+// 			return nil, readAuthApiHttpBodyError
+// 		}
+// 		return nil, errors.New("Authorization error.\n" + req.Status + " " + string(bodyBytes))
+// 	}
 
-	return req.Cookies(), nil
-}
+// 	return req.Cookies(), nil
+// }
 
-func authorizeProd() ([]*http.Cookie, error) {
+func AuthorizeProd() ([]*http.Cookie, error) {
 	file, err := os.Open(helpers.CfgPath.AuthPath)
 	if err != nil {
 		log.Println(err.Error())
