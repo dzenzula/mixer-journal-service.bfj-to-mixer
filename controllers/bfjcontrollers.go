@@ -43,6 +43,7 @@ func GetListBf() (nBF []int) {
 
 func GetLastJournalsData(nBF []int) (ids map[int][]int) {
 	var data models.Journals
+	var isDelete bool = false
 	ids = map[int][]int{}
 
 	var yaml *cache.Data = cache.ReadYAMLFile(helpers.CfgPath.CachePath)
@@ -75,17 +76,22 @@ func GetLastJournalsData(nBF []int) (ids map[int][]int) {
 		// 	return nil
 		// }
 
-		for _, id := range data.DataJournals {
-			if !cache.IdExists(yaml, id.ID) {
-				cache.WriteYAMLFile(helpers.CfgPath.CachePath, yaml, id.ID)
-				ids[n] = append(ids[n], id.ID)
+		for i := 0; i < 4; i++ {
+			if !cache.IdExists(yaml, data.DataJournals[i].ID) {
+				ids[n] = append(ids[n], data.DataJournals[i].ID)
+				isDelete = true
 			}
 		}
-
 		// fmt.Println(string(out))
 		defer resp.Body.Close()
 	}
 
+	if isDelete {
+		yaml = cache.DeleteIds(helpers.CfgPath.CachePath, yaml)
+		isDelete = false
+	}
+
+	cache.WriteYAMLFile(helpers.CfgPath.CachePath, yaml, ids)
 	return ids
 }
 

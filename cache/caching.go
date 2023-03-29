@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"io/ioutil"
+	"os"
 
 	"gopkg.in/yaml.v2"
 )
@@ -11,7 +11,7 @@ type Data struct {
 }
 
 func ReadYAMLFile(fileName string) *Data {
-	data, err := ioutil.ReadFile(fileName)
+	data, err := os.ReadFile(fileName)
 	if err != nil {
 		return nil
 	}
@@ -25,15 +25,17 @@ func ReadYAMLFile(fileName string) *Data {
 	return &config
 }
 
-func WriteYAMLFile(filename string, config *Data, id int) {
-	config.Ids = append(config.Ids, id)
+func WriteYAMLFile(filename string, config *Data, ids map[int][]int) {
+	for _, values := range ids {
+		config.Ids = append(config.Ids, values...)
+	}
 
 	yamlData, err := yaml.Marshal(&config)
 	if err != nil {
 		return
 	}
 
-	err = ioutil.WriteFile(filename, yamlData, 0644)
+	err = os.WriteFile(filename, yamlData, 0644)
 	if err != nil {
 		return
 	}
@@ -47,4 +49,13 @@ func IdExists(config *Data, id int) bool {
 		}
 	}
 	return false
+}
+
+func DeleteIds(filename string, yaml *Data) *Data {
+	ids := make(map[int][]int)
+	if yaml != nil {
+		yaml.Ids = []int{}
+		WriteYAMLFile(filename, yaml, ids)
+	}
+	return yaml
 }

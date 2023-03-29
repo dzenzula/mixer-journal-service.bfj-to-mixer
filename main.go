@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"main/controllers"
+	"net/http"
 	"time"
 )
 
@@ -20,24 +21,46 @@ func main() {
 	fmt.Println(checktime)
 	time.Sleep(duration) // Wait until the next minute starts
 
+	tenMinuteTick := time.NewTicker(time.Minute * 10).C
 	minuteTick := time.NewTicker(time.Minute).C
+
+	ids := controllers.GetLastJournalsData(nBF)
 
 	for {
 		select {
-		case tm := <-minuteTick:
-			ids := controllers.GetLastJournalsData(nBF)
+		case tm := <-tenMinuteTick:
+			newIds := controllers.GetLastJournalsData(nBF)
+			if len(newIds) != 0 {
+				ids = newIds
+			}
 
 			for key, values := range ids {
 				for _, id := range values {
-					idJournal := controllers.GetJournalData(key, id, cookies)
-					controllers.GetChemCoxes(idJournal, cookies)
-					controllers.GetChemMaterials(idJournal, cookies)
-					controllers.GetChemicalSlags(idJournal, cookies)
+					go func(key int, id int, cookies []*http.Cookie) {
+						idJournal := controllers.GetJournalData(key, id, cookies)
+						controllers.GetChemCoxes(idJournal, cookies)
+						controllers.GetChemMaterials(idJournal, cookies)
+						controllers.GetChemicalSlags(idJournal, cookies)
+					}(key, id, cookies)
+				}
+			}
+			//controllers.GetJournalDatas(ids)
+			fmt.Println(tm)
+
+		case tm := <-minuteTick:
+			for key, values := range ids {
+				for _, id := range values {
+					go func(key int, id int, cookies []*http.Cookie) {
+						idJournal := controllers.GetJournalData(key, id, cookies)
+						controllers.GetChemCoxes(idJournal, cookies)
+						controllers.GetChemMaterials(idJournal, cookies)
+						controllers.GetChemicalSlags(idJournal, cookies)
+					}(key, id, cookies)
 				}
 			}
 
-			//controllers.GetJournalDatas(ids)
 			fmt.Println(tm)
 		}
+
 	}
 }
