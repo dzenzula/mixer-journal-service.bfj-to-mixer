@@ -21,14 +21,14 @@ func main() {
 	fmt.Println(checktime)
 	time.Sleep(duration) // Wait until the next minute starts
 
-	tenMinuteTick := time.NewTicker(time.Minute * 10).C
+	fiveMinuteTick := time.NewTicker(time.Minute * 5).C
 	minuteTick := time.NewTicker(time.Minute).C
 
 	ids := controllers.GetLastJournalsData(nBF)
 
 	for {
 		select {
-		case tm := <-tenMinuteTick:
+		case tm := <-fiveMinuteTick:
 			newIds := controllers.GetLastJournalsData(nBF)
 			if len(newIds) != 0 {
 				ids = newIds
@@ -55,6 +55,7 @@ func main() {
 						controllers.GetChemCoxes(idJournal, cookies)
 						controllers.GetChemMaterials(idJournal, cookies)
 						controllers.GetChemicalSlags(idJournal, cookies)
+						controllers.GetTappings(idJournal, cookies)
 					}(key, id, cookies)
 				}
 			}

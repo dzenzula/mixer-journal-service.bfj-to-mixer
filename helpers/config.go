@@ -10,6 +10,7 @@ type ConfigAPI struct {
 	ApiGetChemCoxes      string `json:"apiGetChemCoxes"`
 	ApiGetChemicalsSlags string `json:"apiGetChemicalsSlags"`
 	ApiGetChemMaterials  string `json:"apiGetChemMaterials"`
+	ApiGetTappings       string `json:"apiGetTappings"`
 }
 
 type ConfigPath struct {

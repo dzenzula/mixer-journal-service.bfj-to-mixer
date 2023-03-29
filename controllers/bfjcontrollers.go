@@ -82,6 +82,12 @@ func GetLastJournalsData(nBF []int) (ids map[int][]int) {
 				isDelete = true
 			}
 		}
+
+		if len(ids) == 0 {
+			for i := 0; i < 4; i++ {
+				ids[n] = append(ids[n], data.DataJournals[i].ID)
+			}
+		}
 		// fmt.Println(string(out))
 		defer resp.Body.Close()
 	}
@@ -92,6 +98,7 @@ func GetLastJournalsData(nBF []int) (ids map[int][]int) {
 	}
 
 	cache.WriteYAMLFile(helpers.CfgPath.CachePath, yaml, ids)
+
 	return ids
 }
 
@@ -129,13 +136,13 @@ func GetJournalDatas(ids map[int][]int, countCookies int) {
 				return
 			}
 
-			out, err := json.MarshalIndent(data, "", "    ")
-			if err != nil {
-				log.Println("Error decoding JSON string:", err)
-				return
-			}
+			// out, err := json.MarshalIndent(data, "", "    ")
+			// if err != nil {
+			// 	log.Println("Error decoding JSON string:", err)
+			// 	return
+			// }
 
-			fmt.Println(string(out))
+			// fmt.Println(string(out))
 			defer resp.Body.Close()
 		}
 	}
@@ -176,13 +183,13 @@ func GetJournalData(nBF int, id int, cookies []*http.Cookie) (idJournal int) {
 		return
 	}
 
-	out, err := json.MarshalIndent(data, "", "    ")
-	if err != nil {
-		log.Println("Error decoding JSON string:", err)
-		return
-	}
+	// out, err := json.MarshalIndent(data, "", "    ")
+	// if err != nil {
+	// 	log.Println("Error decoding JSON string:", err)
+	// 	return
+	// }
 
-	fmt.Println(string(out))
+	// fmt.Println(string(out))
 	defer resp.Body.Close()
 
 	return data.DataJournals.ID
@@ -224,13 +231,13 @@ func GetChemCoxes(id int, cookies []*http.Cookie) (chemCoxes []models.ChemCoxe) 
 		return
 	}
 
-	out, err := json.MarshalIndent(data, "", "    ")
-	if err != nil {
-		log.Println("Error decoding JSON string:", err)
-		return
-	}
+	// out, err := json.MarshalIndent(data, "", "    ")
+	// if err != nil {
+	// 	log.Println("Error decoding JSON string:", err)
+	// 	return
+	// }
 
-	fmt.Println(string(out))
+	// fmt.Println(string(out))
 	return data
 }
 
@@ -270,13 +277,13 @@ func GetChemicalSlags(id int, cookies []*http.Cookie) (chemicalSlags []models.Ch
 		return
 	}
 
-	out, err := json.MarshalIndent(data, "", "    ")
-	if err != nil {
-		log.Println("Error decoding JSON string:", err)
-		return
-	}
+	// out, err := json.MarshalIndent(data, "", "    ")
+	// if err != nil {
+	// 	log.Println("Error decoding JSON string:", err)
+	// 	return
+	// }
 
-	fmt.Println(string(out))
+	// fmt.Println(string(out))
 	return data
 }
 
@@ -316,14 +323,67 @@ func GetChemMaterials(id int, cookies []*http.Cookie) (chemicalMaterials []model
 		return
 	}
 
-	out, err := json.MarshalIndent(data, "", "    ")
+	// out, err := json.MarshalIndent(data, "", "    ")
+	// if err != nil {
+	// 	log.Println("Error decoding JSON string:", err)
+	// 	return
+	// }
+
+	// fmt.Println(string(out))
+	return data
+}
+
+func GetTappings(journalId int, cookies []*http.Cookie) (tappingIds []int) {
+	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.CfgAPI.ApiGetTappings, strconv.Itoa(journalId)), nil)
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	countCookies := len(cookies)
+	for i := 0; i < countCookies; i++ {
+		req.AddCookie(cookies[i])
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println(err.Error())
+	} else if resp.StatusCode != http.StatusOK {
+		cookies, authError := AuthorizeProd()
+		if authError != nil {
+			log.Println("Failed to get new cookies:", authError)
+			return
+		}
+		return GetTappings(journalId, cookies)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err.Error())
+	}
+	defer resp.Body.Close()
+
+	var data []models.Tapping
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		log.Println("Error decoding JSON string:", err)
 		return
 	}
 
-	fmt.Println(string(out))
-	return data
+	var Ids []int
+	for _, tapping := range data {
+		for _, ladle := range tapping.ListLaldes {
+			tappingIds = append(Ids, ladle.IDTapping)
+		}
+	}
+
+	// out, err := json.MarshalIndent(data, "", "    ")
+	// if err != nil {
+	// 	log.Println("Error decoding JSON string:", err)
+	// 	return
+	// }
+
+	// fmt.Println(string(out))
+	return tappingIds
 }
 
 // func authorizeTest() ([]*http.Cookie, error) {

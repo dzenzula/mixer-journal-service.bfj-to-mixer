@@ -7,5 +7,6 @@
     "apiGetListBF": "https://krr-app-paweb01.europe.mittalco.com/blast-furnace-journal-webapi/api/Utility/GetListBF",
     "apiGetChemCoxes": "https://krr-app-paweb01.europe.mittalco.com/blast-furnace-journal-webapi/api/ChemCoxes/%s",
     "apiGetChemicalsSlags": "https://krr-app-paweb01.europe.mittalco.com/blast-furnace-journal-webapi/api/ChemicalSlags/%s",
-    "apiGetChemMaterials": "https://krr-app-paweb01.europe.mittalco.com/blast-furnace-journal-webapi/api/ChemMaterials/%s"
+    "apiGetChemMaterials": "https://krr-app-paweb01.europe.mittalco.com/blast-furnace-journal-webapi/api/ChemMaterials/%s",
+    "apiGetTappings": "https://krr-app-paweb01.europe.mittalco.com/blast-furnace-journal-webapi/api/Tappings/%s"
 }
