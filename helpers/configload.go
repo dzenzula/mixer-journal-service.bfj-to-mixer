@@ -38,3 +38,37 @@ func LoadPathConfig(filePath string) *ConfigPath {
 
 	return config
 }
+
+func LoadAPIMixConfig(filePath string) *ConfigAPIMix {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil
+	}
+	defer file.Close()
+
+	config := &ConfigAPIMix{}
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(config)
+	if err != nil {
+		return nil
+	}
+
+	return config
+}
+
+func LoadTimeConfig(filePath string) *ConfigTime {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil
+	}
+	defer file.Close()
+
+	config := &ConfigTime{}
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(config)
+	if err != nil {
+		return nil
+	}
+
+	return config
+}

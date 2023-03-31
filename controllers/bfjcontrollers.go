@@ -11,14 +11,13 @@ import (
 	"main/helpers"
 	"main/models"
 	"net/http"
-	"os"
 	"strconv"
 )
 
 var client = &http.Client{}
 
 func GetListBf() (nBF []int) {
-	url := helpers.CfgAPI.ApiGetListBF
+	url := helpers.GlobalConfig.BFJAPI.ApiGetListBF
 	req, getListOfBFErr := http.Get(url)
 	if getListOfBFErr != nil {
 		log.Println(getListOfBFErr.Error())
@@ -46,10 +45,10 @@ func GetLastJournalsData(nBF []int) (ids map[int][]int) {
 	var isDelete bool = false
 	ids = map[int][]int{}
 
-	var yaml *cache.Data = cache.ReadYAMLFile(helpers.CfgPath.CachePath)
+	var yaml *cache.Data = cache.ReadYAMLFile(helpers.GlobalConfig.Path.CachePath)
 
 	for _, n := range nBF {
-		req, err := http.NewRequest("GET", fmt.Sprintf(helpers.CfgAPI.ApiGetLastJournals, strconv.Itoa(n)), nil)
+		req, err := http.NewRequest("GET", fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetLastJournals, strconv.Itoa(n)), nil)
 		if err != nil {
 			log.Println(err.Error())
 		}
@@ -93,11 +92,11 @@ func GetLastJournalsData(nBF []int) (ids map[int][]int) {
 	}
 
 	if isDelete {
-		yaml = cache.DeleteIds(helpers.CfgPath.CachePath, yaml)
+		yaml = cache.DeleteIds(helpers.GlobalConfig.Path.CachePath, yaml)
 		isDelete = false
 	}
 
-	cache.WriteYAMLFile(helpers.CfgPath.CachePath, yaml, ids)
+	cache.WriteYAMLFile(helpers.GlobalConfig.Path.CachePath, yaml, ids)
 
 	return ids
 }
@@ -110,7 +109,7 @@ func GetJournalDatas(ids map[int][]int, countCookies int) {
 	}
 	for key, values := range ids {
 		for _, id := range values {
-			req, err := http.NewRequest("GET", fmt.Sprintf(helpers.CfgAPI.ApiGetjournal, strconv.Itoa(id), strconv.Itoa(key)), nil)
+			req, err := http.NewRequest("GET", fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetjournal, strconv.Itoa(id), strconv.Itoa(key)), nil)
 			if err != nil {
 				log.Println(err.Error())
 			}
@@ -149,7 +148,7 @@ func GetJournalDatas(ids map[int][]int, countCookies int) {
 }
 
 func GetJournalData(nBF int, id int, cookies []*http.Cookie) (idJournal int) {
-	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.CfgAPI.ApiGetjournal, strconv.Itoa(id), strconv.Itoa(nBF)), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetjournal, strconv.Itoa(id), strconv.Itoa(nBF)), nil)
 	if err != nil {
 		log.Println(err.Error())
 	}
@@ -196,7 +195,7 @@ func GetJournalData(nBF int, id int, cookies []*http.Cookie) (idJournal int) {
 }
 
 func GetChemCoxes(id int, cookies []*http.Cookie) (chemCoxes []models.ChemCoxe) {
-	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.CfgAPI.ApiGetChemCoxes, strconv.Itoa(id)), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetChemCoxes, strconv.Itoa(id)), nil)
 	if err != nil {
 		log.Println(err.Error())
 	}
@@ -242,7 +241,7 @@ func GetChemCoxes(id int, cookies []*http.Cookie) (chemCoxes []models.ChemCoxe) 
 }
 
 func GetChemicalSlags(id int, cookies []*http.Cookie) (chemicalSlags []models.ChemicalSlag) {
-	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.CfgAPI.ApiGetChemicalsSlags, strconv.Itoa(id)), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetChemicalsSlags, strconv.Itoa(id)), nil)
 	if err != nil {
 		log.Println(err.Error())
 	}
@@ -288,7 +287,7 @@ func GetChemicalSlags(id int, cookies []*http.Cookie) (chemicalSlags []models.Ch
 }
 
 func GetChemMaterials(id int, cookies []*http.Cookie) (chemicalMaterials []models.ChemMaterial) {
-	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.CfgAPI.ApiGetChemMaterials, strconv.Itoa(id)), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetChemMaterials, strconv.Itoa(id)), nil)
 	if err != nil {
 		log.Println(err.Error())
 	}
@@ -334,7 +333,7 @@ func GetChemMaterials(id int, cookies []*http.Cookie) (chemicalMaterials []model
 }
 
 func GetTappings(journalId int, cookies []*http.Cookie) (tappingIds []int) {
-	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.CfgAPI.ApiGetTappings, strconv.Itoa(journalId)), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetTappings, strconv.Itoa(journalId)), nil)
 	if err != nil {
 		log.Println(err.Error())
 	}
@@ -413,19 +412,13 @@ func GetTappings(journalId int, cookies []*http.Cookie) (tappingIds []int) {
 // 	return req.Cookies(), nil
 // }
 
-func AuthorizeProd() ([]*http.Cookie, error) {
-	file, err := os.Open(helpers.CfgPath.AuthPath)
-	if err != nil {
-		log.Println(err.Error())
-	}
-	defer file.Close()
-
-	fileContent, err := io.ReadAll(file)
+func AuthorizeProd() (cookies []*http.Cookie, cookiesErr error) {
+	auth, err := json.Marshal(helpers.GlobalConfig.Auth)
 	if err != nil {
 		log.Println("Can't read the file.")
 	}
 
-	req, err := http.Post(helpers.CfgAPI.ApiPostAuthProd, "application/json", bytes.NewBuffer(fileContent))
+	req, err := http.Post(helpers.GlobalConfig.BFJAPI.ApiPostAuthProd, "application/json", bytes.NewBuffer(auth))
 	if err != nil {
 		return nil, err
 	} else if req.StatusCode != http.StatusOK {

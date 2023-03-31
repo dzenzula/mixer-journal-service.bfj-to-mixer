@@ -9,10 +9,16 @@ import (
 )
 
 func main() {
-	cookies, authError := controllers.AuthorizeProd()
-	if authError != nil {
-		log.Println("Authorization error. \n", authError)
+	cookiesBFJ, authBFJError := controllers.AuthorizeProd()
+	if authBFJError != nil {
+		log.Println("Authorization error. \n", authBFJError)
 	}
+
+	cookiesMIX, authMIXError := controllers.AuthorizationMixer()
+	if authMIXError != nil {
+		log.Println("Authorization error. \n", authMIXError)
+	}
+	fmt.Println(cookiesMIX)
 
 	var nBF []int = controllers.GetListBf()
 
@@ -41,7 +47,8 @@ func main() {
 						controllers.GetChemCoxes(idJournal, cookies)
 						controllers.GetChemMaterials(idJournal, cookies)
 						controllers.GetChemicalSlags(idJournal, cookies)
-					}(key, id, cookies)
+						controllers.GetTappings(idJournal, cookies)
+					}(key, id, cookiesBFJ)
 				}
 			}
 			//controllers.GetJournalDatas(ids)
@@ -56,7 +63,7 @@ func main() {
 						controllers.GetChemMaterials(idJournal, cookies)
 						controllers.GetChemicalSlags(idJournal, cookies)
 						controllers.GetTappings(idJournal, cookies)
-					}(key, id, cookies)
+					}(key, id, cookiesBFJ)
 				}
 			}
 
