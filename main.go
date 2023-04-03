@@ -14,11 +14,11 @@ func main() {
 		log.Println("Authorization error. \n", authBFJError)
 	}
 
-	cookiesMIX, authMIXError := controllers.AuthorizationMixer()
-	if authMIXError != nil {
-		log.Println("Authorization error. \n", authMIXError)
-	}
-	fmt.Println(cookiesMIX)
+	// cookiesMIX, authMIXError := controllers.AuthorizationMixer()
+	// if authMIXError != nil {
+	// 	log.Println("Authorization error. \n", authMIXError)
+	// }
+	// fmt.Println(cookiesMIX)
 
 	var nBF []int = controllers.GetListBf()
 
@@ -41,29 +41,34 @@ func main() {
 			}
 
 			for key, values := range ids {
-				for _, id := range values {
-					go func(key int, id int, cookies []*http.Cookie) {
-						idJournal := controllers.GetJournalData(key, id, cookies)
-						controllers.GetChemCoxes(idJournal, cookies)
-						controllers.GetChemMaterials(idJournal, cookies)
-						controllers.GetChemicalSlags(idJournal, cookies)
-						controllers.GetTappings(idJournal, cookies)
-					}(key, id, cookiesBFJ)
+				for _, idJournal := range values {
+					go func(key int, idJournal int, cookiesBFJ []*http.Cookie) {
+						controllers.GetJournalData(key, idJournal, cookiesBFJ)
+						controllers.GetChemCoxes(idJournal, cookiesBFJ)
+						controllers.GetChemMaterials(idJournal, cookiesBFJ)
+						controllers.GetChemicalSlags(idJournal, cookiesBFJ)
+						controllers.GetTappings(idJournal, cookiesBFJ)
+					}(key, idJournal, cookiesBFJ)
 				}
 			}
 			//controllers.GetJournalDatas(ids)
 			fmt.Println(tm)
 
 		case tm := <-minuteTick:
+			newIds := controllers.GetLastJournalsData(nBF)
+			if len(newIds) != 0 {
+				ids = newIds
+			}
+
 			for key, values := range ids {
-				for _, id := range values {
-					go func(key int, id int, cookies []*http.Cookie) {
-						idJournal := controllers.GetJournalData(key, id, cookies)
-						controllers.GetChemCoxes(idJournal, cookies)
-						controllers.GetChemMaterials(idJournal, cookies)
-						controllers.GetChemicalSlags(idJournal, cookies)
-						controllers.GetTappings(idJournal, cookies)
-					}(key, id, cookiesBFJ)
+				for _, idJournal := range values {
+					//go func(key int, idJournal int, cookiesBFJ []*http.Cookie) {
+					controllers.GetJournalData(key, idJournal, cookiesBFJ)
+					controllers.GetChemCoxes(idJournal, cookiesBFJ)
+					controllers.GetChemMaterials(idJournal, cookiesBFJ)
+					controllers.GetChemicalSlags(idJournal, cookiesBFJ)
+					controllers.GetTappings(idJournal, cookiesBFJ)
+					//}(key, idJournal, cookiesBFJ)
 				}
 			}
 

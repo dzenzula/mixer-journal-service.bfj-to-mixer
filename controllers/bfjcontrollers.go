@@ -17,6 +17,7 @@ import (
 var client = &http.Client{}
 
 func GetListBf() (nBF []int) {
+	var data models.ListBF
 	url := helpers.GlobalConfig.BFJAPI.ApiGetListBF
 	req, getListOfBFErr := http.Get(url)
 	if getListOfBFErr != nil {
@@ -30,7 +31,6 @@ func GetListBf() (nBF []int) {
 		return nil
 	}
 
-	var data models.ListBF
 	jsonError := json.Unmarshal(body, &data)
 	if jsonError != nil {
 		log.Println(jsonError.Error())
@@ -42,30 +42,15 @@ func GetListBf() (nBF []int) {
 
 func GetLastJournalsData(nBF []int) (ids map[int][]int) {
 	var data models.Journals
-	var isDelete bool = false
+	var cookies []*http.Cookie
 	ids = map[int][]int{}
 
-	var yaml *cache.Data = cache.ReadYAMLFile(helpers.GlobalConfig.Path.CachePath)
+	var yaml *cache.Data = &cache.Data{}
 
 	for _, n := range nBF {
-		req, err := http.NewRequest("GET", fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetLastJournals, strconv.Itoa(n)), nil)
+		endpoint := fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetLastJournals, strconv.Itoa(n))
+		err := getAPIResponse(endpoint, cookies, &data)
 		if err != nil {
-			log.Println(err.Error())
-		}
-
-		resp, err := client.Do(req)
-		if err != nil {
-			log.Println(err.Error())
-		}
-
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			log.Println(err.Error())
-		}
-
-		err = json.Unmarshal(body, &data)
-		if err != nil {
-			log.Println("Error decoding JSON string:", err)
 			return nil
 		}
 
@@ -75,25 +60,10 @@ func GetLastJournalsData(nBF []int) (ids map[int][]int) {
 		// 	return nil
 		// }
 
-		for i := 0; i < 4; i++ {
-			if !cache.IdExists(yaml, data.DataJournals[i].ID) {
-				ids[n] = append(ids[n], data.DataJournals[i].ID)
-				isDelete = true
-			}
-		}
-
-		if len(ids) == 0 {
-			for i := 0; i < 4; i++ {
-				ids[n] = append(ids[n], data.DataJournals[i].ID)
-			}
+		for i := 0; i < 2; i++ {
+			ids[n] = append(ids[n], data.DataJournals[i].ID)
 		}
 		// fmt.Println(string(out))
-		defer resp.Body.Close()
-	}
-
-	if isDelete {
-		yaml = cache.DeleteIds(helpers.GlobalConfig.Path.CachePath, yaml)
-		isDelete = false
 	}
 
 	cache.WriteYAMLFile(helpers.GlobalConfig.Path.CachePath, yaml, ids)
@@ -101,38 +71,14 @@ func GetLastJournalsData(nBF []int) (ids map[int][]int) {
 	return ids
 }
 
-func GetJournalDatas(ids map[int][]int, countCookies int) {
-	cookies, authError := AuthorizeProd()
-	if authError != nil {
-		log.Println("Authorization error. \n", authError)
-		return
-	}
+func GetJournalDatas(ids map[int][]int, cookies []*http.Cookie) {
+	var data models.Journal
 	for key, values := range ids {
 		for _, id := range values {
-			req, err := http.NewRequest("GET", fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetjournal, strconv.Itoa(id), strconv.Itoa(key)), nil)
+			endpoint := fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetjournal, strconv.Itoa(id), strconv.Itoa(key))
+			err := getAPIResponse(endpoint, cookies, &data)
 			if err != nil {
-				log.Println(err.Error())
-			}
-
-			for i := 0; i < countCookies; i++ {
-				req.AddCookie(cookies[i])
-			}
-
-			resp, err := client.Do(req)
-			if err != nil {
-				log.Println(err.Error())
-			}
-
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				log.Println(err.Error())
-			}
-
-			var data models.Journal
-			err = json.Unmarshal(body, &data)
-			if err != nil {
-				log.Println("Error decoding JSON string:", err)
-				return
+				log.Println("Couldn't get datas journal")
 			}
 
 			// out, err := json.MarshalIndent(data, "", "    ")
@@ -142,43 +88,15 @@ func GetJournalDatas(ids map[int][]int, countCookies int) {
 			// }
 
 			// fmt.Println(string(out))
-			defer resp.Body.Close()
 		}
 	}
 }
 
-func GetJournalData(nBF int, id int, cookies []*http.Cookie) (idJournal int) {
-	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetjournal, strconv.Itoa(id), strconv.Itoa(nBF)), nil)
-	if err != nil {
-		log.Println(err.Error())
-	}
-
-	countCookies := len(cookies)
-	for i := 0; i < countCookies; i++ {
-		req.AddCookie(cookies[i])
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Println(err.Error())
-	} else if resp.StatusCode != http.StatusOK {
-		cookies, authError := AuthorizeProd()
-		if authError != nil {
-			log.Println("Failed to get new cookies:", authError)
-			return
-		}
-		return GetJournalData(nBF, id, cookies)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Println(err.Error())
-	}
-
+func GetJournalData(nBF int, journalId int, cookies []*http.Cookie) (idJournal models.Journal) {
 	var data models.Journal
-	err = json.Unmarshal(body, &data)
+	endpoint := fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetjournal, strconv.Itoa(journalId), strconv.Itoa(nBF))
+	err := getAPIResponse(endpoint, cookies, &data)
 	if err != nil {
-		log.Println("Error decoding JSON string:", err)
 		return
 	}
 
@@ -189,45 +107,16 @@ func GetJournalData(nBF int, id int, cookies []*http.Cookie) (idJournal int) {
 	// }
 
 	// fmt.Println(string(out))
-	defer resp.Body.Close()
 
-	return data.DataJournals.ID
+	return data
 }
 
-func GetChemCoxes(id int, cookies []*http.Cookie) (chemCoxes []models.ChemCoxe) {
-	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetChemCoxes, strconv.Itoa(id)), nil)
-	if err != nil {
-		log.Println(err.Error())
-	}
-
-	countCookies := len(cookies)
-	for i := 0; i < countCookies; i++ {
-		req.AddCookie(cookies[i])
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Println(err.Error())
-	} else if resp.StatusCode != http.StatusOK {
-		cookies, authError := AuthorizeProd()
-		if authError != nil {
-			log.Println("Failed to get new cookies:", authError)
-			return
-		}
-		return GetChemCoxes(id, cookies)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Println(err.Error())
-	}
-	defer resp.Body.Close()
-
+func GetChemCoxes(journalId int, cookies []*http.Cookie) (chemCoxes []models.ChemCoxe) {
 	var data []models.ChemCoxe
-	err = json.Unmarshal(body, &data)
+	endpoint := fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetChemCoxes, strconv.Itoa(journalId))
+	err := getAPIResponse(endpoint, cookies, &data)
 	if err != nil {
-		log.Println("Error decoding JSON string:", err)
-		return
+		return nil
 	}
 
 	// out, err := json.MarshalIndent(data, "", "    ")
@@ -240,86 +129,31 @@ func GetChemCoxes(id int, cookies []*http.Cookie) (chemCoxes []models.ChemCoxe) 
 	return data
 }
 
-func GetChemicalSlags(id int, cookies []*http.Cookie) (chemicalSlags []models.ChemicalSlag) {
-	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetChemicalsSlags, strconv.Itoa(id)), nil)
-	if err != nil {
-		log.Println(err.Error())
-	}
-
-	countCookies := len(cookies)
-	for i := 0; i < countCookies; i++ {
-		req.AddCookie(cookies[i])
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Println(err.Error())
-	} else if resp.StatusCode != http.StatusOK {
-		cookies, authError := AuthorizeProd()
-		if authError != nil {
-			log.Println("Failed to get new cookies:", authError)
-			return
-		}
-		return GetChemicalSlags(id, cookies)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Println(err.Error())
-	}
-	defer resp.Body.Close()
-
+func GetChemicalSlags(journalId int, cookies []*http.Cookie) (chemicalSlags []models.ChemicalSlag) {
 	var data []models.ChemicalSlag
-	err = json.Unmarshal(body, &data)
+	endpoint := fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetChemicalsSlags, strconv.Itoa(journalId))
+	err := getAPIResponse(endpoint, cookies, &data)
+	if err != nil {
+		return nil
+	}
+
+	out, err := json.MarshalIndent(data, "", "    ")
 	if err != nil {
 		log.Println("Error decoding JSON string:", err)
 		return
 	}
 
-	// out, err := json.MarshalIndent(data, "", "    ")
-	// if err != nil {
-	// 	log.Println("Error decoding JSON string:", err)
-	// 	return
-	// }
-
-	// fmt.Println(string(out))
+	fmt.Println(string(out))
 	return data
 }
 
-func GetChemMaterials(id int, cookies []*http.Cookie) (chemicalMaterials []models.ChemMaterial) {
-	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetChemMaterials, strconv.Itoa(id)), nil)
-	if err != nil {
-		log.Println(err.Error())
-	}
-
-	countCookies := len(cookies)
-	for i := 0; i < countCookies; i++ {
-		req.AddCookie(cookies[i])
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Println(err.Error())
-	} else if resp.StatusCode != http.StatusOK {
-		cookies, authError := AuthorizeProd()
-		if authError != nil {
-			log.Println("Failed to get new cookies:", authError)
-			return
-		}
-		return GetChemMaterials(id, cookies)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Println(err.Error())
-	}
-	defer resp.Body.Close()
+func GetChemMaterials(journalId int, cookies []*http.Cookie) (chemicalMaterials []models.ChemMaterial) {
 
 	var data []models.ChemMaterial
-	err = json.Unmarshal(body, &data)
+	endpoint := fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetChemMaterials, strconv.Itoa(journalId))
+	err := getAPIResponse(endpoint, cookies, &data)
 	if err != nil {
-		log.Println("Error decoding JSON string:", err)
-		return
+		return nil
 	}
 
 	// out, err := json.MarshalIndent(data, "", "    ")
@@ -333,39 +167,11 @@ func GetChemMaterials(id int, cookies []*http.Cookie) (chemicalMaterials []model
 }
 
 func GetTappings(journalId int, cookies []*http.Cookie) (tappingIds []int) {
-	req, err := http.NewRequest("GET", fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetTappings, strconv.Itoa(journalId)), nil)
-	if err != nil {
-		log.Println(err.Error())
-	}
-
-	countCookies := len(cookies)
-	for i := 0; i < countCookies; i++ {
-		req.AddCookie(cookies[i])
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Println(err.Error())
-	} else if resp.StatusCode != http.StatusOK {
-		cookies, authError := AuthorizeProd()
-		if authError != nil {
-			log.Println("Failed to get new cookies:", authError)
-			return
-		}
-		return GetTappings(journalId, cookies)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Println(err.Error())
-	}
-	defer resp.Body.Close()
-
 	var data []models.Tapping
-	err = json.Unmarshal(body, &data)
+	endpoint := fmt.Sprintf(helpers.GlobalConfig.BFJAPI.ApiGetTappings, strconv.Itoa(journalId))
+	err := getAPIResponse(endpoint, cookies, &data)
 	if err != nil {
-		log.Println("Error decoding JSON string:", err)
-		return
+		return nil
 	}
 
 	var Ids []int
@@ -384,33 +190,6 @@ func GetTappings(journalId int, cookies []*http.Cookie) (tappingIds []int) {
 	// fmt.Println(string(out))
 	return tappingIds
 }
-
-// func authorizeTest() ([]*http.Cookie, error) {
-// 	file, err := os.Open(helpers.CfgPath.AuthPath)
-// 	if err != nil {
-// 		log.Println(err.Error())
-// 	}
-// 	defer file.Close()
-
-// 	fileContent, err := io.ReadAll(file)
-// 	if err != nil {
-// 		log.Println("Can't read the file.")
-// 	}
-
-// 	req, err := http.Post(helpers.CfgAPI.ApiPostAuthTest, "application/json", bytes.NewBuffer(fileContent))
-// 	if err != nil {
-// 		return nil, err
-// 	} else if req.StatusCode != http.StatusOK {
-// 		bodyBytes, readAuthApiHttpBodyError := io.ReadAll(req.Body)
-// 		if readAuthApiHttpBodyError != nil {
-// 			fmt.Println("Error reading the response body of a rejected authorization request.\n", readAuthApiHttpBodyError)
-// 			return nil, readAuthApiHttpBodyError
-// 		}
-// 		return nil, errors.New("Authorization error.\n" + req.Status + " " + string(bodyBytes))
-// 	}
-
-// 	return req.Cookies(), nil
-// }
 
 func AuthorizeProd() (cookies []*http.Cookie, cookiesErr error) {
 	auth, err := json.Marshal(helpers.GlobalConfig.Auth)
@@ -431,4 +210,42 @@ func AuthorizeProd() (cookies []*http.Cookie, cookiesErr error) {
 	}
 
 	return req.Cookies(), nil
+}
+
+func getAPIResponse(endpoint string, cookies []*http.Cookie, data interface{}) error {
+	req, err := http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	countCookies := len(cookies)
+	for i := 0; i < countCookies; i++ {
+		req.AddCookie(cookies[i])
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println(err.Error())
+	} else if resp.StatusCode != http.StatusOK {
+		cookies, authError := AuthorizeProd()
+		if authError != nil {
+			log.Println("Failed to get new cookies:", authError)
+			return authError
+		}
+		getAPIResponse(endpoint, cookies, data)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err.Error())
+	}
+	defer resp.Body.Close()
+
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		log.Println("Error decoding JSON string:", err)
+		return err
+	}
+
+	return nil
 }

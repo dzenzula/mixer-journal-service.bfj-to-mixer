@@ -59,3 +59,12 @@ func DeleteIds(filename string, yaml *Data) *Data {
 	}
 	return yaml
 }
+
+func (y *Data) ReplaceId(oldId, newId int) error {
+	for i, id := range y.Ids {
+		if id == oldId {
+			y.Ids[i] = newId
+		}
+	}
+	return nil
+}
