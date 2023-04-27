@@ -1,10 +1,14 @@
-package helpers
+package config
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
 )
+
+type ConfigPath struct {
+	CachePath string `json:"cachePath"`
+}
 
 type Config struct {
 	BFJAPI ConfigAPI     `json:"bfj_api_prod"`
@@ -27,21 +31,20 @@ type ConfigAPI struct {
 	ApiGetTappings       string `json:"apiGetTappings"`
 }
 
-type ConfigPath struct {
-	CachePath string `json:"cachePath"`
-}
-
 type ConfigAPIMix struct {
-	ApiUrl          string `json:"apiUrl"`
-	ApiPostAuthTest string `json:"apiPostAuthTest"`
+	ApiUrl                       string `json:"apiUrl"`
+	ApiPostAuthTest              string `json:"apiPostAuthTest"`
+	ApiGetLastJournals           string `json:"apiGetLastJournals"`
+	ApiPostChemical              string `json:"apiPostChemical"`
+	ApiPostLadleMovement         string `json:"apiPostLadleMovement"`
+	ApiPostPouringBucketMovement string `json:"apiPostPouringBucketMovement"`
 }
 
 type ConfigTime struct {
-	OneMinuteInterval  string `json:"one_minute_interval"`
-	FiveMinuteInterval string `json:"five_minute_interval"`
-	TenMinuteInterval  string `json:"ten_minute_interval"`
-	OneHourInterval    string `json:"one_hour_interval"`
-	FiveHourInterval   string `json:"five_hour_interval"`
+	OneMinuteInterval string `json:"oneMinuteInterval"`
+	OneHourInterval   string `json:"oneHourInterval"`
+	MorningShift      string `json:"morningShift"`
+	EveningShift      string `json:"eveningShift"`
 }
 
 type Authorization struct {

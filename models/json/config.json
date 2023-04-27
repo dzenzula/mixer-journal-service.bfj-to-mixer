@@ -14,7 +14,11 @@
 
     "mix_api_test": {
         "apiUrl": "https://krr-tst-padev02.europe.mittalco.com/mixer-journal-webapi/api",
-        "apiPostAuthTest": "https://krr-tst-padev02.europe.mittalco.com/mixer-journal-webapi/api/Authorization/LogInAuthorization"
+        "apiPostAuthTest": "https://krr-tst-padev02.europe.mittalco.com/mixer-journal-webapi/api/Authorization/LogInAuthorization",
+        "apiGetLastJournals": "https://krr-tst-padev02.europe.mittalco.com/mixer-journal-webapi/api/Journals/GetLastJournals/%s",
+        "apiPostChemical": "https://krr-tst-padev02.europe.mittalco.com/mixer-journal-webapi/api/ExternalServices/AddChemical",
+        "apiPostLadleMovement": "https://krr-tst-padev02.europe.mittalco.com/mixer-journal-webapi/api/LadleMovement/%s",
+        "apiPostPouringBucketMovement": "https://krr-tst-padev02.europe.mittalco.com/mixer-journal-webapi/api/PouringBucketMovement/%s"
     },
 
     "paths": {
@@ -22,11 +26,10 @@
     },
 
     "time": {
-        "one_minute_interval": "1m",
-        "five_minute_interval": "5m",
-        "ten_minute_interval": "10m",
-        "one_hour_interval": "1h",
-        "five_hour_interval": "5h"
+        "oneMinuteInterval": "1m",
+        "oneHourInterval": "1h",
+        "morningShift": "07:30",
+        "eveningShift": "19:30"
     },
 
     "auth": {
