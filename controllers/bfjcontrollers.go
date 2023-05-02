@@ -58,7 +58,6 @@ func GetLastBFJJournalsData(nBF []int) (ids map[int][]int) {
 	}
 
 	cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, ids, nil)
-
 	return ids
 }
 

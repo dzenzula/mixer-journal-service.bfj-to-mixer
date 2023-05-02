@@ -25,61 +25,44 @@ func main() {
 	var nBF []int = controllers.GetListBf()
 	var nMix []int = []int{1, 2, 3, 4}
 
-	morningShiftTick, eveningShiftTick, oneHourTick := initializeTimers()
-
 	bfjIds := controllers.GetLastBFJJournalsData(nBF)
 	mixIds := controllers.GetLastMIXJournalsData(nMix)
 
+	duration := time.Until(time.Now().Truncate(time.Minute).Add(time.Minute))
+	time.Sleep(duration)
+	ticker := time.NewTicker(1 * time.Minute).C
+	fmt.Println(time.Now().String())
+
 	for {
-		select {
-		case <-morningShiftTick:
-			var clear []map[int]int
-			newIds := controllers.GetLastBFJJournalsData(nBF)
-			if len(newIds) != 0 {
-				bfjIds = newIds
-			}
-			cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, nil, clear)
-			fmt.Println("Morning shift works")
-		case <-eveningShiftTick:
-			var clear []map[int]int
-			newIds := controllers.GetLastBFJJournalsData(nBF)
-			if len(newIds) != 0 {
-				bfjIds = newIds
-			}
-			cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, nil, clear)
-			fmt.Println("Evening shift works")
-		case tm := <-oneHourTick:
-			tIds := cache.ReadYAMLFile(config.GlobalConfig.Path.CachePath)
-			for nBf, values := range bfjIds {
-				for _, idJournal := range values {
-					go func(nBf int, idJournal int, bfjCookies []*http.Cookie) {
-						tappings := controllers.GetBFJTappings(idJournal, bfjCookies)
+		service(nBF, &bfjIds, bfjCookies, mixIds, mixCookies, ticker)
+	}
+}
 
-						for _, tapping := range tappings {
-							sendLadleMovements(nBf, tIds, tapping, mixIds, mixCookies)
-						}
-					}(nBf, idJournal, bfjCookies)
-				}
-			}
-			cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, nil, tIds.Tappings)
-			fmt.Println(tm.String() + " 1hour works")
-
-			/* case tm := <-minuteTick:
-			tIds := cache.ReadYAMLFile(config.GlobalConfig.Path.CachePath)
-			for nBf, values := range bfjIds {
-				for _, idJournal := range values {
-					//go func(nBf int, idJournal int, bfjCookies []*http.Cookie) {
-					tappings := controllers.GetBFJTappings(idJournal, bfjCookies)
-
-					for _, tapping := range tappings {
-						sendLadleMovements(nBf, tIds, tapping, mixIds, mixCookies)
-					}
-					//}(nBf, idJournal, bfjCookies)
-				}
-			}
-			cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, nil, tIds.Tappings)
-			fmt.Println(tm.String() + " 1min works")*/
+func service(nBF []int, bfjIds *map[int][]int, bfjCookies []*http.Cookie, mixIds map[int][]int, mixCookies []*http.Cookie, ticker <-chan time.Time) {
+	now := <-ticker
+	if (now.Hour() == 8 && now.Minute() == 0) || (now.Hour() == 20 && now.Minute() == 0) {
+		var clear []map[int]int
+		newIds := controllers.GetLastBFJJournalsData(nBF)
+		if len(newIds) != 0 {
+			bfjIds = &newIds
 		}
+		cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, newIds, clear)
+		fmt.Println(now.String(), "Worked fine shift")
+	} else if now.Minute() == 0 {
+		tIds := cache.ReadYAMLFile(config.GlobalConfig.Path.CachePath)
+		for nBf, values := range *bfjIds {
+			for _, idJournal := range values {
+
+				tappings := controllers.GetBFJTappings(idJournal, bfjCookies)
+
+				for _, tapping := range tappings {
+					sendLadleMovements(nBf, tIds, tapping, mixIds, mixCookies)
+				}
+
+			}
+		}
+		cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, nil, tIds.Tappings)
+		fmt.Println(now.String(), "Worked fine hour check")
 	}
 }
 
@@ -101,42 +84,4 @@ func sendLadleMovements(nBf int, tIds *cache.Data, tapping models.Tapping, mixId
 			cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, nil, tIds.Tappings)
 		}
 	}
-}
-
-func initializeTimers() (morningShiftTick, eveningShiftTick, oneHourTick <-chan time.Time) {
-	duration := time.Until(time.Now().Truncate(time.Minute).Add(time.Minute)) // Calculate the duration until the next minute starts
-	checktime := time.Time{}.Add(duration)
-	fmt.Println(checktime)
-	time.Sleep(duration) // Wait until the next minute starts
-
-	oneHourDuration, _ := time.ParseDuration(config.GlobalConfig.Time.OneHourInterval)
-	//oneMinDuration, _ := time.ParseDuration(config.GlobalConfig.Time.OneMinuteInterval)
-	mTime, _ := time.Parse("15:04", config.GlobalConfig.Time.MorningShift)
-	eTime, _ := time.Parse("15:04", config.GlobalConfig.Time.EveningShift)
-
-	now := time.Now()
-	var nextHour time.Time
-	if now.Minute() == 0 {
-		nextHour = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, now.Location())
-	} else {
-		nextHour = time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+1, 0, 0, 0, now.Location())
-	}
-
-	nextMorning := time.Date(nextHour.Year(), nextHour.Month(), nextHour.Day(), mTime.Hour(), mTime.Minute(), 0, 0, time.Now().Location())
-	nextEvening := time.Date(nextHour.Year(), nextHour.Month(), nextHour.Day(), eTime.Hour(), eTime.Minute(), 0, 0, time.Now().Location())
-
-	if time.Now().After(nextEvening) {
-		nextEvening = nextEvening.AddDate(0, 0, 1)
-	}
-	if time.Now().After(nextMorning) {
-		nextMorning = nextMorning.AddDate(0, 0, 1)
-	}
-
-	morningShiftTick = time.NewTimer(time.Until(nextMorning)).C
-	eveningShiftTick = time.NewTimer(time.Until(nextEvening)).C
-
-	oneHourTick = time.NewTicker(oneHourDuration).C
-	//minuteTick = time.NewTicker(oneMinDuration).C
-
-	return morningShiftTick, eveningShiftTick, oneHourTick
 }

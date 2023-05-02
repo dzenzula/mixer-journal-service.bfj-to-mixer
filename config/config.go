@@ -14,7 +14,6 @@ type Config struct {
 	BFJAPI ConfigAPI     `json:"bfj_api_prod"`
 	MIXAPI ConfigAPIMix  `json:"mix_api_test"`
 	Path   ConfigPath    `json:"paths"`
-	Time   ConfigTime    `json:"time"`
 	Auth   Authorization `json:"auth"`
 }
 
@@ -38,13 +37,6 @@ type ConfigAPIMix struct {
 	ApiPostChemical              string `json:"apiPostChemical"`
 	ApiPostLadleMovement         string `json:"apiPostLadleMovement"`
 	ApiPostPouringBucketMovement string `json:"apiPostPouringBucketMovement"`
-}
-
-type ConfigTime struct {
-	OneMinuteInterval string `json:"oneMinuteInterval"`
-	OneHourInterval   string `json:"oneHourInterval"`
-	MorningShift      string `json:"morningShift"`
-	EveningShift      string `json:"eveningShift"`
 }
 
 type Authorization struct {

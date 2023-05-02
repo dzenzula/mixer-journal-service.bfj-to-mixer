@@ -25,13 +25,6 @@
         "cachePath": "cache/cache.yaml"
     },
 
-    "time": {
-        "oneMinuteInterval": "1m",
-        "oneHourInterval": "1h",
-        "morningShift": "07:30",
-        "eveningShift": "19:30"
-    },
-
     "auth": {
         "login": "aadzenzura",
         "password": "h)#X2Ubu04Qm1",
