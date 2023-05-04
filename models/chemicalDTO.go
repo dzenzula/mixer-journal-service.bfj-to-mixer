@@ -6,9 +6,9 @@ type ChemicalDTO struct {
 	Proba      int     `json:"proba"`
 	NumTaphole int     `json:"numTaphole"`
 	DT         *string `json:"dt"`
-	Si         int     `json:"si"`
-	Mn         int     `json:"mn"`
-	S          int     `json:"s"`
-	P          int     `json:"p"`
+	Si         float64 `json:"si"`
+	Mn         float64 `json:"mn"`
+	S          float64 `json:"s"`
+	P          float64 `json:"p"`
 	Belong     string  `json:"belong"`
 }

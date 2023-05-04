@@ -37,6 +37,7 @@ type ConfigAPIMix struct {
 	ApiPostChemical              string `json:"apiPostChemical"`
 	ApiPostLadleMovement         string `json:"apiPostLadleMovement"`
 	ApiPostPouringBucketMovement string `json:"apiPostPouringBucketMovement"`
+	ApiGetLadleMovement          string `json:"apiGetLadleMovement"`
 }
 
 type Authorization struct {

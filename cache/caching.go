@@ -62,7 +62,6 @@ func WriteYAMLFile(filename string, ids map[int][]int, tappings []map[int]int) {
 	if err != nil {
 		return
 	}
-
 }
 
 func IdExists(config *Data, id int) bool {
