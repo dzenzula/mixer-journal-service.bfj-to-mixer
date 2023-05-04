@@ -3,15 +3,14 @@ package controllers
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
-	"main/cache"
 	"main/config"
 	"main/models"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 var client = &http.Client{}
@@ -57,7 +56,6 @@ func GetLastBFJJournalsData(nBF []int) (ids map[int][]int) {
 		}
 	}
 
-	cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, ids, nil)
 	return ids
 }
 
@@ -72,24 +70,32 @@ func GetBFJTappings(journalId int, cookies []*http.Cookie) (tappingIds []models.
 }
 
 func AuthorizeBFJ() (cookies []*http.Cookie, cookiesErr error) {
-	auth, err := json.Marshal(config.GlobalConfig.Auth)
-	if err != nil {
-		log.Println("Can't read the file.")
-	}
+	auth, _ := json.Marshal(config.GlobalConfig.Auth)
 
-	req, err := http.Post(config.GlobalConfig.BFJAPI.ApiPostAuthProd, "application/json", bytes.NewBuffer(auth))
-	if err != nil {
-		return nil, err
-	} else if req.StatusCode != http.StatusOK {
-		bodyBytes, readAuthApiHttpBodyError := io.ReadAll(req.Body)
-		if readAuthApiHttpBodyError != nil {
-			fmt.Println("Error reading the response body of a rejected authorization request.\n", readAuthApiHttpBodyError)
-			return nil, readAuthApiHttpBodyError
+	for {
+		success := true
+		req, err := http.Post(config.GlobalConfig.BFJAPI.ApiPostAuthProd, "application/json", bytes.NewBuffer(auth))
+		if err != nil {
+			success = false
+			fmt.Printf("Failed to send authorization request: %v", err)
 		}
-		return nil, errors.New("Authorization error.\n" + req.Status + " " + string(bodyBytes))
-	}
+		defer req.Body.Close()
 
-	return req.Cookies(), nil
+		if req.StatusCode != http.StatusOK {
+			success = false
+			bodyBytes, err := io.ReadAll(req.Body)
+			if err != nil {
+				fmt.Printf("Failed to read authorization response body: %v\n", err)
+			}
+			fmt.Printf("Rejected authorization request: %s\n", bodyBytes)
+			fmt.Println("Next try to authorize will be in a 5 minutes")
+			time.Sleep(time.Minute * 5)
+		}
+
+		if success {
+			return req.Cookies(), nil
+		}
+	}
 }
 
 func getBfjApiResponse(endpoint string, cookies []*http.Cookie, data interface{}) error {

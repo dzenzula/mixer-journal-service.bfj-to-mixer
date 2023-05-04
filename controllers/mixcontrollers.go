@@ -3,7 +3,6 @@ package controllers
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -11,6 +10,7 @@ import (
 	"main/models"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 func GetLastMIXJournalsData(nMIX []int) (ids map[int][]int) {
@@ -54,10 +54,10 @@ func postMixChemical(listLadles []models.Ladle, cookies []*http.Cookie) {
 				Proba:      int(ladle.Chemical.Proba),
 				NumTaphole: ladle.Chemical.NumTaphole,
 				DT:         checkChemDate(ladle),
-				Si:         int(ladle.Chemical.Si),
-				Mn:         int(ladle.Chemical.Mn),
-				S:          int(ladle.Chemical.S),
-				P:          int(ladle.Chemical.P),
+				Si:         float64(ladle.Chemical.Si),
+				Mn:         float64(ladle.Chemical.Mn),
+				S:          float64(ladle.Chemical.S),
+				P:          float64(ladle.Chemical.P),
 				Belong:     "LadleMovement",
 			}
 			postMixApiRequest(endpoint, cookies, chem)
@@ -84,9 +84,9 @@ func PostMixLadleMovement(nBf int, tapping models.Tapping) models.LadleMovement 
 	return ldlMvm
 }
 
-func PostMixListLadles(listLadles []models.Ladle, ldlMvm models.LadleMovement, mixIds map[int][]int, cookies []*http.Cookie) {
+func PostMixListLadles(listLadles []models.Ladle, ldlMvm models.LadleMovement, mixIds *map[int][]int, cookies []*http.Cookie) {
 	for i := 0; i < len(listLadles); i++ {
-		for _, keys := range mixIds {
+		for _, keys := range *mixIds {
 			ldlMvm.LadleTapping = listLadles[i].Ladle
 			ldlMvm.MassCastIron = int(listLadles[i].Weight)
 
@@ -103,24 +103,32 @@ func PostMixListLadles(listLadles []models.Ladle, ldlMvm models.LadleMovement, m
 }
 
 func AuthorizeMix() ([]*http.Cookie, error) {
-	auth, err := json.Marshal(config.GlobalConfig.Auth)
-	if err != nil {
-		log.Println("Can't marshal the data")
-	}
+	authJSON, _ := json.Marshal(config.GlobalConfig.Auth)
 
-	req, err := http.Post(config.GlobalConfig.MIXAPI.ApiPostAuthTest, "application/json", bytes.NewBuffer(auth))
-	if err != nil {
-		return nil, err
-	} else if req.StatusCode != http.StatusOK {
-		bodyBytes, readAuthApiHttpBodyError := io.ReadAll(req.Body)
-		if readAuthApiHttpBodyError != nil {
-			fmt.Println("Error reading the response body of a rejected authorization request.\n", readAuthApiHttpBodyError)
-			return nil, readAuthApiHttpBodyError
+	for {
+		success := true
+		req, err := http.Post(config.GlobalConfig.MIXAPI.ApiPostAuthTest, "application/json", bytes.NewBuffer(authJSON))
+		if err != nil {
+			success = false
+			fmt.Printf("Failed to send authorization request: %v", err)
 		}
-		return nil, errors.New("Authorization error.\n" + req.Status + " " + string(bodyBytes))
-	}
+		defer req.Body.Close()
 
-	return req.Cookies(), nil
+		if req.StatusCode != http.StatusOK {
+			success = false
+			bodyBytes, err := io.ReadAll(req.Body)
+			if err != nil {
+				fmt.Printf("Failed to read authorization response body: %v\n", err)
+			}
+			fmt.Printf("Rejected authorization request: %s\n", bodyBytes)
+			fmt.Println("Next try to authorize will be in a 5 minutes")
+			time.Sleep(time.Minute * 5)
+		}
+
+		if success {
+			return req.Cookies(), nil
+		}
+	}
 }
 
 func postMixApiRequest(endpoint string, cookies []*http.Cookie, requestData interface{}) error {
