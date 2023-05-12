@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"main/config"
 	"main/models"
 	"net/http"
@@ -13,9 +12,8 @@ import (
 	"time"
 )
 
-func GetLastMIXJournalsData(nMIX []int) (ids map[int][]int) {
+func GetLastMIXJournalsData(nMIX []int, cookies []*http.Cookie) (ids map[int][]int) {
 	var data models.MixJournals
-	var cookies []*http.Cookie
 	ids = map[int][]int{}
 
 	for _, n := range nMIX {
@@ -94,7 +92,7 @@ func PostMixListLadles(listLadles []models.Ladle, ldlMvm models.LadleMovement, m
 				endpoint := fmt.Sprintf(config.GlobalConfig.MIXAPI.ApiPostLadleMovement, strconv.Itoa(key))
 				postErr := postMixApiRequest(endpoint, cookies, ldlMvm)
 				if postErr != nil {
-					fmt.Println(endpoint + " Success!")
+					fmt.Println(postErr.Error())
 				}
 
 			}
@@ -102,7 +100,7 @@ func PostMixListLadles(listLadles []models.Ladle, ldlMvm models.LadleMovement, m
 	}
 }
 
-func AuthorizeMix() ([]*http.Cookie, error) {
+func AuthorizeMix(cookies *[]*http.Cookie) {
 	authJSON, _ := json.Marshal(config.GlobalConfig.Auth)
 
 	for {
@@ -126,7 +124,9 @@ func AuthorizeMix() ([]*http.Cookie, error) {
 		}
 
 		if success {
-			return req.Cookies(), nil
+			fmt.Println("Authorization MIX success!")
+			*cookies = req.Cookies()
+			return
 		}
 	}
 }
@@ -134,47 +134,43 @@ func AuthorizeMix() ([]*http.Cookie, error) {
 func postMixApiRequest(endpoint string, cookies []*http.Cookie, requestData interface{}) error {
 	requestBody, err := json.Marshal(requestData)
 	if err != nil {
-		log.Println("Error encoding request JSON:", err)
+		fmt.Println("Error encoding request JSON:", err)
 		return err
 	}
 
 	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(requestBody))
 	if err != nil {
-		log.Println("Error creating HTTP request:", err)
+		fmt.Println("Error creating HTTP request:", err)
 		return err
 	}
 	req.Header.Set("content-type", "application/json")
 
-	countCookies := len(cookies)
-	for i := 0; i < countCookies; i++ {
-		req.AddCookie(cookies[i])
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
 	}
 
-	resp, err := client.Do(req)
+	resp, errResp := client.Do(req)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Println("Error executing HTTP request:", err)
+		fmt.Println(err.Error())
+	}
+	defer resp.Body.Close()
+
+	fmt.Println(endpoint, string(body))
+
+	if errResp != nil {
+		fmt.Println("Error executing HTTP request:", err)
 		return err
 	} else if resp.StatusCode != http.StatusOK {
-		cookies, authError := AuthorizeMix()
-		if authError != nil {
-			log.Println("Failed to get new cookies:", authError)
-			return authError
-		}
+		AuthorizeMix(&cookies)
 
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			log.Println(err.Error())
-		}
-		defer resp.Body.Close()
-
-		fmt.Println(string(body))
+		fmt.Println("Respond MIX error: ", string(body))
 
 		if string(body) == "NotAuthorized" {
 			postMixApiRequest(endpoint, cookies, requestData)
 		} else {
 			return nil
 		}
-
 	}
 
 	return nil
@@ -183,36 +179,31 @@ func postMixApiRequest(endpoint string, cookies []*http.Cookie, requestData inte
 func getMixApiResponse(endpoint string, cookies []*http.Cookie, data interface{}) error {
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
-		log.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 
-	countCookies := len(cookies)
-	for i := 0; i < countCookies; i++ {
-		req.AddCookie(cookies[i])
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Println(err.Error())
+		fmt.Println(err.Error())
 	} else if resp.StatusCode != http.StatusOK {
-		cookies, authError := AuthorizeMix()
-		if authError != nil {
-			log.Println("Failed to get new cookies:", authError)
-			return authError
-		}
+		AuthorizeMix(&cookies)
 		getMixApiResponse(endpoint, cookies, data)
 		return nil
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	defer resp.Body.Close()
 
 	err = json.Unmarshal(body, &data)
 	if err != nil {
-		log.Println("Error decoding JSON string:", err)
+		fmt.Println("Error decoding JSON string:", err)
 		return err
 	}
 

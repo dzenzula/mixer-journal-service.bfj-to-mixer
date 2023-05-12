@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"main/cache"
 	"main/config"
 	"main/controllers"
@@ -13,23 +12,18 @@ import (
 )
 
 var currList map[int][]models.Ladle = make(map[int][]models.Ladle)
+var bfjCookies []*http.Cookie
+var mixCookies []*http.Cookie
 
 func main() {
-	bfjCookies, bfjErr := controllers.AuthorizeBFJ()
-	if bfjErr != nil {
-		log.Println("Authorization error. \n", bfjErr)
-	}
-
-	mixCookies, mixErr := controllers.AuthorizeMix()
-	if mixErr != nil {
-		log.Println("Authorization error. \n", mixErr)
-	}
+	controllers.AuthorizeBFJ(&bfjCookies)
+	controllers.AuthorizeMix(&mixCookies)
 
 	var nBF []int = controllers.GetListBf()
 	var nMix []int = []int{1, 2, 3, 4}
 
 	bfjIds := controllers.GetLastBFJJournalsData(nBF)
-	mixIds := controllers.GetLastMIXJournalsData(nMix)
+	mixIds := controllers.GetLastMIXJournalsData(nMix, mixCookies)
 
 	data := cache.ReadYAMLFile(config.GlobalConfig.Path.CachePath)
 	cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, bfjIds, data.Tappings)
@@ -54,7 +48,7 @@ func service(nBF []int, bfjIds *map[int][]int, bfjCookies []*http.Cookie, nMix [
 		fmt.Println(time.Now().String(), "Shift started")
 
 		newBfjIds := controllers.GetLastBFJJournalsData(nBF)
-		newMixIds := controllers.GetLastMIXJournalsData(nMix)
+		newMixIds := controllers.GetLastMIXJournalsData(nMix, mixCookies)
 
 		if len(newBfjIds) != 0 {
 			bfjIds = &newBfjIds
@@ -63,20 +57,20 @@ func service(nBF []int, bfjIds *map[int][]int, bfjCookies []*http.Cookie, nMix [
 			mixIds = &newMixIds
 		}
 
-		hourCheck(bfjIds, bfjCookies, mixIds, mixCookies)
+		minuteCheck(bfjIds, bfjCookies, mixIds, mixCookies)
 
 		cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, *bfjIds, nil)
 		fmt.Println(time.Now().String(), "First data shift transfer")
 	} else if now.Second() == 0 {
-		fmt.Println(time.Now().String(), "Hour check started")
+		fmt.Println(time.Now().String(), "Minute check started")
 
-		hourCheck(bfjIds, bfjCookies, mixIds, mixCookies)
+		minuteCheck(bfjIds, bfjCookies, mixIds, mixCookies)
 
-		fmt.Println(time.Now().String(), "Hour check finished")
+		fmt.Println(time.Now().String(), "Minute check finished")
 	}
 }
 
-func hourCheck(bfjIds *map[int][]int, bfjCookies []*http.Cookie, mixIds *map[int][]int, mixCookies []*http.Cookie) {
+func minuteCheck(bfjIds *map[int][]int, bfjCookies []*http.Cookie, mixIds *map[int][]int, mixCookies []*http.Cookie) {
 	tIds := cache.ReadYAMLFile(config.GlobalConfig.Path.CachePath)
 	for nBf, values := range *bfjIds {
 		for _, idJournal := range values {
@@ -110,25 +104,24 @@ func sendLadleMovements(nBf int, tIds *cache.Data, tapping models.Tapping, mixId
 		}
 	}
 
-	if currList[tapping.ID] != nil {
-		if !reflect.DeepEqual(currList[tapping.ID], tapping.ListLaldes) {
-			fmt.Println(time.Now().Truncate(time.Minute).String(), "Chemical changed!")
-			oldLadles := currList[tapping.ID]
-			currLadles := tapping.ListLaldes
-			changedLadles := []models.Ladle{}
-			for _, newLadle := range currLadles {
-				for _, currLadle := range oldLadles {
-					if newLadle.Ladle == currLadle.Ladle {
-						if !reflect.DeepEqual(newLadle.Chemical, currLadle.Chemical) {
-							changedLadles = append(changedLadles, newLadle)
-						}
-					}
+	// Обработка изменений в составе химикатов
+	if currList[tapping.ID] == nil {
+		currList[tapping.ID] = tapping.ListLaldes
+	} else if !reflect.DeepEqual(currList[tapping.ID], tapping.ListLaldes) {
+		fmt.Println(time.Now().Truncate(time.Minute).String(), "Chemical changed!")
+		oldLadles := currList[tapping.ID]
+		currLadles := tapping.ListLaldes
+		changedLadles := []models.Ladle{}
+
+		for _, newLadle := range currLadles {
+			for _, currLadle := range oldLadles {
+				if newLadle.Ladle == currLadle.Ladle && !reflect.DeepEqual(newLadle.Chemical, currLadle.Chemical) {
+					changedLadles = append(changedLadles, newLadle)
 				}
 			}
-			controllers.PostMixChemicalList(changedLadles, mixCookies)
-			currList[tapping.ID] = tapping.ListLaldes
 		}
-	} else {
-		currList[tapping.ID] = append(currList[tapping.ID], tapping.ListLaldes...)
+
+		controllers.PostMixChemicalList(changedLadles, mixCookies)
+		currList[tapping.ID] = tapping.ListLaldes
 	}
 }
