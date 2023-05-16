@@ -31,13 +31,12 @@ type ConfigAPI struct {
 }
 
 type ConfigAPIMix struct {
-	ApiUrl                       string `json:"apiUrl"`
-	ApiPostAuthTest              string `json:"apiPostAuthTest"`
-	ApiGetLastJournals           string `json:"apiGetLastJournals"`
-	ApiPostChemical              string `json:"apiPostChemical"`
-	ApiPostLadleMovement         string `json:"apiPostLadleMovement"`
-	ApiPostPouringBucketMovement string `json:"apiPostPouringBucketMovement"`
-	ApiGetLadleMovement          string `json:"apiGetLadleMovement"`
+	ApiUrl               string `json:"apiUrl"`
+	ApiPostAuthTest      string `json:"apiPostAuthTest"`
+	ApiGetLastJournals   string `json:"apiGetLastJournals"`
+	ApiPostChemical      string `json:"apiPostChemical"`
+	ApiPostLadleMovement string `json:"apiPostLadleMovement"`
+	ApiGetLadleMovement  string `json:"apiGetLadleMovement"`
 }
 
 type Authorization struct {

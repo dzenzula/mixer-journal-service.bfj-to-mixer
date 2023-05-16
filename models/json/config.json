@@ -18,7 +18,7 @@
         "apiGetLastJournals": "https://krr-tst-padev02.europe.mittalco.com/mixer-journal-webapi/api/Journals/GetLastJournals/%s",
         "apiPostChemical": "https://krr-tst-padev02.europe.mittalco.com/mixer-journal-webapi/api/ExternalServices/AddChemical",
         "apiPostLadleMovement": "https://krr-tst-padev02.europe.mittalco.com/mixer-journal-webapi/api/LadleMovement/%s",
-        "apiPostPouringBucketMovement": "https://krr-tst-padev02.europe.mittalco.com/mixer-journal-webapi/api/PouringBucketMovement/%s"
+        "apiGetLadleMovement": "https://krr-tst-padev02.europe.mittalco.com/mixer-journal-webapi/api/LadleMovement/%s"
     },
 
     "paths": {

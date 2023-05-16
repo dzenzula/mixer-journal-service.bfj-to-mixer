@@ -38,27 +38,27 @@ func GetListBf() (nBF []int) {
 	return data.Name
 }
 
-func GetLastBFJJournalsData(nBF []int) (ids map[int][]int) {
+func GetLastBFJJournalsData(nBF []int, ids *map[int][]int) {
 	var data models.Journals
-	var cookies []*http.Cookie
-	ids = map[int][]int{}
+
+	if *ids == nil {
+		*ids = make(map[int][]int)
+	}
 
 	for _, n := range nBF {
 		endpoint := fmt.Sprintf(config.GlobalConfig.BFJAPI.ApiGetLastJournals, strconv.Itoa(n))
-		err := getBfjApiResponse(endpoint, cookies, &data)
+		err := getBfjApiResponse(endpoint, nil, &data)
 		if err != nil {
-			return nil
+			return
 		}
 
 		for i := 0; i < 1; i++ {
-			ids[n] = append(ids[n], data.DataJournals[i].ID)
+			(*ids)[n] = append((*ids)[n], data.DataJournals[i].ID)
 		}
 	}
-
-	return ids
 }
 
-func GetBFJTappings(journalId int, cookies []*http.Cookie) (tappingIds []models.Tapping) {
+func GetBFJTappings(journalId int, cookies *[]*http.Cookie) (tappingIds []models.Tapping) {
 	var data []models.Tapping
 	endpoint := fmt.Sprintf(config.GlobalConfig.BFJAPI.ApiGetTappings, strconv.Itoa(journalId))
 	err := getBfjApiResponse(endpoint, cookies, &data)
@@ -101,21 +101,23 @@ func AuthorizeBFJ(cookies *[]*http.Cookie) {
 	}
 }
 
-func getBfjApiResponse(endpoint string, cookies []*http.Cookie, data interface{}) error {
+func getBfjApiResponse(endpoint string, cookies *[]*http.Cookie, data interface{}) error {
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 
-	for _, cookie := range cookies {
-		req.AddCookie(cookie)
+	if cookies != nil {
+		for _, cookie := range *cookies {
+			req.AddCookie(cookie)
+		}
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err.Error())
 	} else if resp.StatusCode != http.StatusOK {
-		AuthorizeBFJ(&cookies)
+		AuthorizeBFJ(cookies)
 		getBfjApiResponse(endpoint, cookies, data)
 		return nil
 	}

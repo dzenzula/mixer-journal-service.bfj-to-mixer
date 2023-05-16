@@ -12,37 +12,38 @@ import (
 	"time"
 )
 
-func GetLastMIXJournalsData(nMIX []int, cookies []*http.Cookie) (ids map[int][]int) {
+func GetLastMIXJournalsData(nMIX []int, cookies *[]*http.Cookie, ids *map[int][]int) {
 	var data models.MixJournals
-	ids = map[int][]int{}
+
+	if *ids == nil {
+		*ids = make(map[int][]int)
+	}
 
 	for _, n := range nMIX {
 		endpoint := fmt.Sprintf(config.GlobalConfig.MIXAPI.ApiGetLastJournals, strconv.Itoa(n))
 		err := getMixApiResponse(endpoint, cookies, &data)
 		if err != nil {
-			return nil
+			return
 		}
 
 		if len(data.DataJournals) > 0 {
 			for i := 0; i < 1; i++ {
-				ids[n] = append(ids[n], data.DataJournals[i].ID)
+				(*ids)[n] = append((*ids)[n], data.DataJournals[i].ID)
 			}
 		}
 	}
-
-	return ids
 }
 
-func PostMixChemical(tapping models.Tapping, cookies []*http.Cookie) {
+func PostMixChemical(tapping models.Tapping, cookies *[]*http.Cookie) {
 	listLadles := tapping.ListLaldes
 	postMixChemical(listLadles, cookies)
 }
 
-func PostMixChemicalList(listLadles []models.Ladle, cookies []*http.Cookie) {
+func PostMixChemicalList(listLadles []models.Ladle, cookies *[]*http.Cookie) {
 	postMixChemical(listLadles, cookies)
 }
 
-func postMixChemical(listLadles []models.Ladle, cookies []*http.Cookie) {
+func postMixChemical(listLadles []models.Ladle, cookies *[]*http.Cookie) {
 	endpoint := fmt.Sprintf(config.GlobalConfig.MIXAPI.ApiPostChemical)
 	for nMix := 1; nMix < 5; nMix++ {
 		for _, ladle := range listLadles {
@@ -82,7 +83,7 @@ func PostMixLadleMovement(nBf int, tapping models.Tapping) models.LadleMovement 
 	return ldlMvm
 }
 
-func PostMixListLadles(listLadles []models.Ladle, ldlMvm models.LadleMovement, mixIds *map[int][]int, cookies []*http.Cookie) {
+func PostMixListLadles(listLadles []models.Ladle, ldlMvm models.LadleMovement, mixIds *map[int][]int, cookies *[]*http.Cookie) {
 	for i := 0; i < len(listLadles); i++ {
 		for _, keys := range *mixIds {
 			ldlMvm.LadleTapping = listLadles[i].Ladle
@@ -131,7 +132,7 @@ func AuthorizeMix(cookies *[]*http.Cookie) {
 	}
 }
 
-func postMixApiRequest(endpoint string, cookies []*http.Cookie, requestData interface{}) error {
+func postMixApiRequest(endpoint string, cookies *[]*http.Cookie, requestData interface{}) error {
 	requestBody, err := json.Marshal(requestData)
 	if err != nil {
 		fmt.Println("Error encoding request JSON:", err)
@@ -145,28 +146,26 @@ func postMixApiRequest(endpoint string, cookies []*http.Cookie, requestData inte
 	}
 	req.Header.Set("content-type", "application/json")
 
-	for _, cookie := range cookies {
+	for _, cookie := range *cookies {
 		req.AddCookie(cookie)
 	}
 
 	resp, errResp := client.Do(req)
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	defer resp.Body.Close()
-
-	fmt.Println(endpoint, string(body))
 
 	if errResp != nil {
 		fmt.Println("Error executing HTTP request:", err)
 		return err
 	} else if resp.StatusCode != http.StatusOK {
-		AuthorizeMix(&cookies)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		defer resp.Body.Close()
 
-		fmt.Println("Respond MIX error: ", string(body))
+		fmt.Println("Respond PostMIX error: ", string(body))
 
 		if string(body) == "NotAuthorized" {
+			AuthorizeMix(cookies)
 			postMixApiRequest(endpoint, cookies, requestData)
 		} else {
 			return nil
@@ -176,30 +175,38 @@ func postMixApiRequest(endpoint string, cookies []*http.Cookie, requestData inte
 	return nil
 }
 
-func getMixApiResponse(endpoint string, cookies []*http.Cookie, data interface{}) error {
+func getMixApiResponse(endpoint string, cookies *[]*http.Cookie, data interface{}) error {
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 
-	for _, cookie := range cookies {
+	for _, cookie := range *cookies {
 		req.AddCookie(cookie)
 	}
 
 	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println(err.Error())
-	} else if resp.StatusCode != http.StatusOK {
-		AuthorizeMix(&cookies)
-		getMixApiResponse(endpoint, cookies, data)
-		return nil
-	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, errResp := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 	defer resp.Body.Close()
+
+	if errResp != nil {
+		fmt.Println(err.Error())
+		return errResp
+	} else if resp.StatusCode != http.StatusOK {
+		fmt.Println("Respond GetMIX error: ", string(body))
+
+		if string(body) == "NotAuthorized" {
+			AuthorizeMix(cookies)
+			getMixApiResponse(endpoint, cookies, data)
+		} else {
+			return nil
+		}
+		return nil
+	}
 
 	err = json.Unmarshal(body, &data)
 	if err != nil {

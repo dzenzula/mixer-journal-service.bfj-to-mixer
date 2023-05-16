@@ -14,6 +14,9 @@ import (
 var currList map[int][]models.Ladle = make(map[int][]models.Ladle)
 var bfjCookies []*http.Cookie
 var mixCookies []*http.Cookie
+var bfjIds map[int][]int = map[int][]int{}
+var mixIds map[int][]int = map[int][]int{}
+var data *cache.Data = cache.ReadYAMLFile(config.GlobalConfig.Path.CachePath)
 
 func main() {
 	controllers.AuthorizeBFJ(&bfjCookies)
@@ -22,10 +25,9 @@ func main() {
 	var nBF []int = controllers.GetListBf()
 	var nMix []int = []int{1, 2, 3, 4}
 
-	bfjIds := controllers.GetLastBFJJournalsData(nBF)
-	mixIds := controllers.GetLastMIXJournalsData(nMix, mixCookies)
+	controllers.GetLastBFJJournalsData(nBF, &bfjIds)
+	controllers.GetLastMIXJournalsData(nMix, &mixCookies, &mixIds)
 
-	data := cache.ReadYAMLFile(config.GlobalConfig.Path.CachePath)
 	cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, bfjIds, data.Tappings)
 
 	duration := time.Until(time.Now().Truncate(time.Minute).Add(time.Minute))
@@ -34,56 +36,46 @@ func main() {
 	fmt.Println(time.Now().String())
 
 	for {
-		service(nBF, &bfjIds, bfjCookies, nMix, &mixIds, mixCookies)
+		service(nBF, &bfjIds, &bfjCookies, nMix, &mixIds, &mixCookies)
 
 		ticker := time.NewTicker(time.Until(time.Now().Truncate(time.Minute).Add(time.Minute)))
 		<-ticker.C
 	}
 }
 
-func service(nBF []int, bfjIds *map[int][]int, bfjCookies []*http.Cookie, nMix []int, mixIds *map[int][]int, mixCookies []*http.Cookie) {
+func service(nBF []int, bfjIds *map[int][]int, bfjCookies *[]*http.Cookie, nMix []int, mixIds *map[int][]int, mixCookies *[]*http.Cookie) {
 	now := time.Now().Truncate(time.Minute)
 	if (now.Hour() == 8 && now.Minute() == 0) || (now.Hour() == 20 && now.Minute() == 0) {
 		currList = make(map[int][]models.Ladle)
-		fmt.Println(time.Now().String(), "Shift started")
+		fmt.Println(time.Now().Format("2006-01-02 15:04:05"), "Shift started")
 
-		newBfjIds := controllers.GetLastBFJJournalsData(nBF)
-		newMixIds := controllers.GetLastMIXJournalsData(nMix, mixCookies)
-
-		if len(newBfjIds) != 0 {
-			bfjIds = &newBfjIds
-		}
-		if len(newMixIds) != 0 {
-			mixIds = &newMixIds
-		}
-
-		minuteCheck(bfjIds, bfjCookies, mixIds, mixCookies)
+		controllers.GetLastBFJJournalsData(nBF, bfjIds)
+		controllers.GetLastMIXJournalsData(nMix, mixCookies, mixIds)
 
 		cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, *bfjIds, nil)
-		fmt.Println(time.Now().String(), "First data shift transfer")
-	} else if now.Second() == 0 {
-		fmt.Println(time.Now().String(), "Minute check started")
 
 		minuteCheck(bfjIds, bfjCookies, mixIds, mixCookies)
+	} else if now.Second() == 0 {
+		fmt.Println(time.Now().Format("2006-01-02 15:04:05"), "Minute check started")
 
-		fmt.Println(time.Now().String(), "Minute check finished")
+		minuteCheck(bfjIds, bfjCookies, mixIds, mixCookies)
 	}
 }
 
-func minuteCheck(bfjIds *map[int][]int, bfjCookies []*http.Cookie, mixIds *map[int][]int, mixCookies []*http.Cookie) {
-	tIds := cache.ReadYAMLFile(config.GlobalConfig.Path.CachePath)
+func minuteCheck(bfjIds *map[int][]int, bfjCookies *[]*http.Cookie, mixIds *map[int][]int, mixCookies *[]*http.Cookie) {
+	data = cache.ReadYAMLFile(config.GlobalConfig.Path.CachePath)
 	for nBf, values := range *bfjIds {
 		for _, idJournal := range values {
 			tappings := controllers.GetBFJTappings(idJournal, bfjCookies)
 			for _, tapping := range tappings {
-				sendLadleMovements(nBf, tIds, tapping, mixIds, mixCookies)
+				sendLadleMovements(nBf, data, tapping, mixIds, mixCookies)
 			}
 		}
 	}
-	cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, nil, tIds.Tappings)
+	cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, nil, data.Tappings)
 }
 
-func sendLadleMovements(nBf int, tIds *cache.Data, tapping models.Tapping, mixIds *map[int][]int, mixCookies []*http.Cookie) {
+func sendLadleMovements(nBf int, tIds *cache.Data, tapping models.Tapping, mixIds *map[int][]int, mixCookies *[]*http.Cookie) {
 	if !cache.TappingIdExists(tIds, tapping.ID) {
 		ldlMvm := controllers.PostMixLadleMovement(nBf, tapping)
 		controllers.PostMixListLadles(tapping.ListLaldes, ldlMvm, mixIds, mixCookies)
@@ -108,20 +100,24 @@ func sendLadleMovements(nBf int, tIds *cache.Data, tapping models.Tapping, mixId
 	if currList[tapping.ID] == nil {
 		currList[tapping.ID] = tapping.ListLaldes
 	} else if !reflect.DeepEqual(currList[tapping.ID], tapping.ListLaldes) {
-		fmt.Println(time.Now().Truncate(time.Minute).String(), "Chemical changed!")
 		oldLadles := currList[tapping.ID]
 		currLadles := tapping.ListLaldes
 		changedLadles := []models.Ladle{}
 
 		for _, newLadle := range currLadles {
 			for _, currLadle := range oldLadles {
+				currLadle.Chemical.DtUpdate = newLadle.Chemical.DtUpdate
 				if newLadle.Ladle == currLadle.Ladle && !reflect.DeepEqual(newLadle.Chemical, currLadle.Chemical) {
 					changedLadles = append(changedLadles, newLadle)
 				}
 			}
 		}
 
-		controllers.PostMixChemicalList(changedLadles, mixCookies)
+		if len(changedLadles) != 0 {
+			fmt.Println(time.Now().Truncate(time.Minute).String(), "Chemical changed!")
+			controllers.PostMixChemicalList(changedLadles, mixCookies)
+		}
+
 		currList[tapping.ID] = tapping.ListLaldes
 	}
 }
