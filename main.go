@@ -14,8 +14,8 @@ import (
 var currList map[int][]models.Ladle = make(map[int][]models.Ladle)
 var bfjCookies []*http.Cookie
 var mixCookies []*http.Cookie
-var bfjIds map[int][]int = map[int][]int{}
-var mixIds map[int][]int = map[int][]int{}
+var bfjIds map[int][]int = map[int][]int{} //{6: {28112}, 7: {28113}, 8: {28114}, 9: {28115}}
+var mixIds map[int][]int = map[int][]int{} //{1: {10297}, 2: {10294}, 3: {10296}, 4: {10295}}
 var data *cache.Data = cache.ReadYAMLFile(config.GlobalConfig.Path.CachePath)
 
 func main() {
@@ -45,7 +45,7 @@ func main() {
 
 func service(nBF []int, bfjIds *map[int][]int, bfjCookies *[]*http.Cookie, nMix []int, mixIds *map[int][]int, mixCookies *[]*http.Cookie) {
 	now := time.Now().Truncate(time.Minute)
-	if (now.Hour() == 8 && now.Minute() == 0) || (now.Hour() == 20 && now.Minute() == 0) {
+	if (now.Hour() == 9 && now.Minute() == 35) || (now.Hour() == 20 && now.Minute() == 0) {
 		currList = make(map[int][]models.Ladle)
 		fmt.Println(time.Now().Format("2006-01-02 15:04:05"), "Shift started")
 

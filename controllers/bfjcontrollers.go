@@ -41,7 +41,7 @@ func GetListBf() (nBF []int) {
 func GetLastBFJJournalsData(nBF []int, ids *map[int][]int) {
 	var data models.Journals
 
-	if *ids == nil {
+	if *ids != nil {
 		*ids = make(map[int][]int)
 	}
 

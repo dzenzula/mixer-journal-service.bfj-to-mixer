@@ -15,7 +15,7 @@ import (
 func GetLastMIXJournalsData(nMIX []int, cookies *[]*http.Cookie, ids *map[int][]int) {
 	var data models.MixJournals
 
-	if *ids == nil {
+	if *ids != nil {
 		*ids = make(map[int][]int)
 	}
 
