@@ -45,7 +45,7 @@ func main() {
 
 func service(nBF []int, bfjIds *map[int][]int, bfjCookies *[]*http.Cookie, nMix []int, mixIds *map[int][]int, mixCookies *[]*http.Cookie) {
 	now := time.Now().Truncate(time.Minute)
-	if (now.Hour() == 9 && now.Minute() == 35) || (now.Hour() == 20 && now.Minute() == 0) {
+	if (now.Hour() == 8 && now.Minute() == 0) || (now.Hour() == 20 && now.Minute() == 0) {
 		currList = make(map[int][]models.Ladle)
 		fmt.Println(time.Now().Format("2006-01-02 15:04:05"), "Shift started")
 
