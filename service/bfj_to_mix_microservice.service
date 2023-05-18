@@ -1,0 +1,14 @@
+[Unit]
+Description = bfj_to_mix_microservice daemon
+After = network.target
+
+[Service]
+Type = simple
+WorkingDirectory = /home/services/bfj_to_mix_microservice
+ExecStart = /home/services/bfj_to_mix_microservice/bfj_to_mix_microservice
+Restart = always
+RestartSec = 30
+TimeoutStopSec = 5
+
+[Install]
+WantedBy = multi-user.target
