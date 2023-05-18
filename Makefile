@@ -1,7 +1,7 @@
-BUILD_NAME ?= mixer_journal_service
+BUILD_NAME ?= bfj_to_mix_microservice
 DEST_DIR := deploy/
 #DEPLOY_FILES := ${BUILD_NAME} configs/${BUILD_NAME}.conf.yml service/${BUILD_NAME}.service
-DEPLOY_FILES := ${BUILD_NAME} service/${BUILD_NAME}.service configs/configurations.json
+DEPLOY_FILES := ${BUILD_NAME} service/${BUILD_NAME}.service config/config.json
 
 build:
 	go build -ldflags "-s -w" -o ${BUILD_NAME} main.go
