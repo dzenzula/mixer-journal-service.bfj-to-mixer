@@ -109,12 +109,12 @@ func sendLadleMovements(nBf int, tIds *cache.Data, tapping models.Tapping, mixId
 				currLadle.Chemical.DtUpdate = newLadle.Chemical.DtUpdate
 				if newLadle.Ladle == currLadle.Ladle && !reflect.DeepEqual(newLadle.Chemical, currLadle.Chemical) {
 					changedLadles = append(changedLadles, newLadle)
+					fmt.Println(time.Now().Truncate(time.Minute).String(), newLadle.Ladle, " changed!")
 				}
 			}
 		}
 
 		if len(changedLadles) != 0 {
-			fmt.Println(time.Now().Truncate(time.Minute).String(), "Chemical changed!")
 			controllers.PostMixChemicalList(changedLadles, mixCookies)
 		}
 

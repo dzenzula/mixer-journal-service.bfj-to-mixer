@@ -3,7 +3,7 @@ package models
 type ChemicalDTO struct {
 	NMix       int     `json:"nMix"`
 	Ladle      string  `json:"ladle"`
-	Proba      int     `json:"proba"`
+	NumSample  int     `json:"numSample"`
 	NumTaphole int     `json:"numTaphole"`
 	DT         *string `json:"dt"`
 	Si         float64 `json:"si"`

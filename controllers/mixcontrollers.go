@@ -50,7 +50,7 @@ func postMixChemical(listLadles []models.Ladle, cookies *[]*http.Cookie) {
 			chem := models.ChemicalDTO{
 				NMix:       nMix,
 				Ladle:      ladle.Ladle,
-				Proba:      int(ladle.Chemical.Proba),
+				NumSample:  int(ladle.Chemical.Proba),
 				NumTaphole: ladle.Chemical.NumTaphole,
 				DT:         checkChemDate(ladle),
 				Si:         float64(ladle.Chemical.Si),
