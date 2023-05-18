@@ -26,8 +26,8 @@
     },
 
     "auth": {
-        "login": "aadzenzura",
-        "password": "h)#X2Ubu04Qm1",
+        "login": "%LOGIN%",
+        "password": "%PASSWORD%",
         "domain": "EUROPE"
     }
 }
