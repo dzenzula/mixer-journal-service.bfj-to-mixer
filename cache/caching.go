@@ -12,8 +12,10 @@ type Data struct {
 	Tappings []map[int]int `yaml:"tappings"`
 }
 
-func ReadYAMLFile(fileName string) *Data {
-	data, err := os.ReadFile(fileName)
+func ReadYAMLFile(filename string) *Data {
+	isFileExist(filename)
+
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil
 	}
@@ -28,6 +30,8 @@ func ReadYAMLFile(fileName string) *Data {
 }
 
 func WriteYAMLFile(filename string, ids map[int][]int, tappings []map[int]int) {
+	isFileExist(filename)
+
 	var config Data
 	data, err := os.ReadFile(filename)
 	if err != nil {
@@ -62,6 +66,25 @@ func WriteYAMLFile(filename string, ids map[int][]int, tappings []map[int]int) {
 	if err != nil {
 		return
 	}
+}
+
+func isFileExist(filename string) error {
+	_, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		config := &Data{}
+
+		yamlData, err := yaml.Marshal(config)
+		if err != nil {
+			return err
+		}
+
+		err = os.WriteFile(filename, yamlData, 0644)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func IdExists(config *Data, id int) bool {
