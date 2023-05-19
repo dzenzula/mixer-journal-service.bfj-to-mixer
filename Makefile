@@ -1,4 +1,4 @@
-BUILD_NAME ?= bfj_to_mix_microservice
+BUILD_NAME ?= mixer-journal-service.bfj-to-mixer
 DEST_DIR := deploy/
 #DEPLOY_FILES := ${BUILD_NAME} configs/${BUILD_NAME}.conf.yml service/${BUILD_NAME}.service
 DEPLOY_FILES := ${BUILD_NAME} service/${BUILD_NAME}.service config/config.json
@@ -23,4 +23,5 @@ install: ${DEPLOY_FILES}
 clean:
 	go clean
 	rm -r ${DEST_DIR}
+
 
