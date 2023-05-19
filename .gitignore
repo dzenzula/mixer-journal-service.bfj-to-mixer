@@ -1,0 +1,4 @@
+*.log*
+deploy/*
+/*.yml
+mixer-journal-service.bfj-to-mixer
