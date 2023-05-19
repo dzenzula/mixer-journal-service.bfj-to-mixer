@@ -3,6 +3,7 @@ package cache
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"gopkg.in/yaml.v2"
 )
@@ -71,6 +72,17 @@ func WriteYAMLFile(filename string, ids map[int][]int, tappings []map[int]int) {
 func isFileExist(filename string) error {
 	_, err := os.Stat(filename)
 	if os.IsNotExist(err) {
+		dir := filepath.Dir(filename)
+		_, err := os.Stat(dir)
+
+		if os.IsNotExist(err) {
+			// Создаем папку, если она не существует
+			err := os.MkdirAll(dir, 0755)
+			if err != nil {
+				return err
+			}
+		}
+
 		config := &Data{}
 
 		yamlData, err := yaml.Marshal(config)
