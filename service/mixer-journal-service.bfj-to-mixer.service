@@ -1,0 +1,15 @@
+[Unit]
+Description = mixer-journal-service.bfj-to-mixer daemon
+After = network.target
+
+[Service]
+Type = simple
+WorkingDirectory = /home/services/mixer-journal-service.bfj-to-mixer.service
+ExecStart = /home/services/mixer-journal-service.bfj-to-mixer/mixer-journal-service.bfj-to-mixer
+Restart = always
+RestartSec = 30
+TimeoutStopSec = 5
+
+[Install]
+WantedBy = multi-user.target
+
