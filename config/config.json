@@ -22,7 +22,7 @@
     },
 
     "paths": {
-        "cachePath": "cache/cache.yaml"
+        "cachePath": "cache.yaml"
     },
 
     "auth": {
