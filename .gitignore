@@ -2,3 +2,4 @@
 deploy/*
 /*.yml
 mixer-journal-service.bfj-to-mixer
+config.json

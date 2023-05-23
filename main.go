@@ -5,6 +5,7 @@ import (
 	"main/cache"
 	"main/config"
 	"main/controllers"
+	"main/logger"
 	"main/models"
 	"net/http"
 	"reflect"
@@ -19,6 +20,7 @@ var mixIds map[int][]int = map[int][]int{} //{1: {10297}, 2: {10294}, 3: {10296}
 var data *cache.Data = cache.ReadYAMLFile(config.GlobalConfig.Path.CachePath)
 
 func main() {
+	logger.InitLogger()
 	controllers.AuthorizeBFJ(&bfjCookies)
 	controllers.AuthorizeMix(&mixCookies)
 
@@ -47,7 +49,7 @@ func service(nBF []int, bfjIds *map[int][]int, bfjCookies *[]*http.Cookie, nMix 
 	now := time.Now().Truncate(time.Minute)
 	if (now.Hour() == 8 && now.Minute() == 0) || (now.Hour() == 20 && now.Minute() == 0) {
 		currList = make(map[int][]models.Ladle)
-		fmt.Println(time.Now().Format("2006-01-02 15:04:05"), "Shift started")
+		logger.Logger.Println(time.Now().Format("2006-01-02 15:04:05"), "Shift started")
 
 		controllers.GetLastBFJJournalsData(nBF, bfjIds)
 		controllers.GetLastMIXJournalsData(nMix, mixCookies, mixIds)
@@ -56,7 +58,7 @@ func service(nBF []int, bfjIds *map[int][]int, bfjCookies *[]*http.Cookie, nMix 
 
 		minuteCheck(bfjIds, bfjCookies, mixIds, mixCookies)
 	} else if now.Second() == 0 {
-		fmt.Println(time.Now().Format("2006-01-02 15:04:05"), "Minute check started")
+		logger.Logger.Println(time.Now().Format("2006-01-02 15:04:05"), "Minute check started")
 
 		minuteCheck(bfjIds, bfjCookies, mixIds, mixCookies)
 	}
@@ -109,7 +111,7 @@ func sendLadleMovements(nBf int, tIds *cache.Data, tapping models.Tapping, mixId
 				currLadle.Chemical.DtUpdate = newLadle.Chemical.DtUpdate
 				if newLadle.Ladle == currLadle.Ladle && !reflect.DeepEqual(newLadle.Chemical, currLadle.Chemical) {
 					changedLadles = append(changedLadles, newLadle)
-					fmt.Println(time.Now().Truncate(time.Minute).String(), newLadle.Ladle, " changed!")
+					logger.Logger.Println(time.Now().Truncate(time.Minute).String(), newLadle.Ladle, " changed!")
 				}
 			}
 		}

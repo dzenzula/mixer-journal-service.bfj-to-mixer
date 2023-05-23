@@ -2,6 +2,7 @@ package cache
 
 import (
 	"fmt"
+	"main/logger"
 	"os"
 
 	"gopkg.in/yaml.v2"
@@ -17,12 +18,14 @@ func ReadYAMLFile(filename string) *Data {
 
 	data, err := os.ReadFile(filename)
 	if err != nil {
+		logger.Logger.Println(err.Error())
 		return nil
 	}
 
 	var config Data
 	err = yaml.Unmarshal(data, &config)
 	if err != nil {
+		logger.Logger.Println(err.Error())
 		return nil
 	}
 
@@ -35,11 +38,13 @@ func WriteYAMLFile(filename string, ids map[int][]int, tappings []map[int]int) {
 	var config Data
 	data, err := os.ReadFile(filename)
 	if err != nil {
+		logger.Logger.Println(err.Error())
 		return
 	}
 
 	err = yaml.Unmarshal(data, &config)
 	if err != nil {
+		logger.Logger.Println(err.Error())
 		return
 	}
 
@@ -59,11 +64,13 @@ func WriteYAMLFile(filename string, ids map[int][]int, tappings []map[int]int) {
 
 	yamlData, err := yaml.Marshal(&config)
 	if err != nil {
+		logger.Logger.Println(err.Error())
 		return
 	}
 
 	err = os.WriteFile(filename, yamlData, 0644)
 	if err != nil {
+		logger.Logger.Println(err.Error())
 		return
 	}
 }
@@ -75,11 +82,13 @@ func isFileExist(filename string) error {
 
 		yamlData, err := yaml.Marshal(config)
 		if err != nil {
+			logger.Logger.Println(err.Error())
 			return err
 		}
 
 		err = os.WriteFile(filename, yamlData, 0644)
 		if err != nil {
+			logger.Logger.Println(err.Error())
 			return err
 		}
 	}
@@ -145,5 +154,6 @@ func UpdateTappingValue(config *Data, id, newValue int) error {
 			}
 		}
 	}
+	logger.Logger.Printf("tapping with ID %d not found", id)
 	return fmt.Errorf("tapping with ID %d not found", id)
 }

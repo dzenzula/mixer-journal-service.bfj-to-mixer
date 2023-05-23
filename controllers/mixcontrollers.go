@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"main/config"
+	"main/logger"
 	"main/models"
 	"net/http"
 	"strconv"
@@ -93,7 +94,8 @@ func PostMixListLadles(listLadles []models.Ladle, ldlMvm models.LadleMovement, m
 				endpoint := fmt.Sprintf(config.GlobalConfig.MIXAPI.ApiPostLadleMovement, strconv.Itoa(key))
 				postErr := postMixApiRequest(endpoint, cookies, ldlMvm)
 				if postErr != nil {
-					fmt.Println(postErr.Error())
+					logger.Logger.Println(postErr.Error())
+					
 				}
 
 			}
@@ -109,25 +111,29 @@ func AuthorizeMix(cookies *[]*http.Cookie) {
 		req, err := http.Post(config.GlobalConfig.MIXAPI.ApiPostAuthTest, "application/json", bytes.NewBuffer(authJSON))
 		if err != nil {
 			success = false
-			fmt.Printf("Failed to send authorization request: %v", err)
+			logger.Logger.Printf("Failed to send authorization request: %v", err)
 		}
-		defer req.Body.Close()
 
-		if req.StatusCode != http.StatusOK {
-			success = false
-			bodyBytes, err := io.ReadAll(req.Body)
-			if err != nil {
-				fmt.Printf("Failed to read authorization response body: %v\n", err)
+		if req != nil {
+			defer req.Body.Close()
+
+			if req.StatusCode != http.StatusOK {
+				success = false
+				bodyBytes, err := io.ReadAll(req.Body)
+				if err != nil {
+					logger.Logger.Printf("Failed to read authorization response body: %v\n", err)
+				}
+				logger.Logger.Printf("Rejected authorization request: %s\n", bodyBytes)
 			}
-			fmt.Printf("Rejected authorization request: %s\n", bodyBytes)
-			fmt.Println("Next try to authorize will be in a 5 minutes")
-			time.Sleep(time.Minute * 5)
 		}
 
 		if success {
-			fmt.Println("Authorization MIX success!")
+			logger.Logger.Println("Authorization MIX success!")
 			*cookies = req.Cookies()
 			return
+		} else {
+			logger.Logger.Println("Next try to authorize will be in a 5 minutes")
+			time.Sleep(time.Minute * 5)
 		}
 	}
 }
@@ -135,13 +141,13 @@ func AuthorizeMix(cookies *[]*http.Cookie) {
 func postMixApiRequest(endpoint string, cookies *[]*http.Cookie, requestData interface{}) error {
 	requestBody, err := json.Marshal(requestData)
 	if err != nil {
-		fmt.Println("Error encoding request JSON:", err)
+		logger.Logger.Println("Error encoding request JSON:", err)
 		return err
 	}
 
 	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(requestBody))
 	if err != nil {
-		fmt.Println("Error creating HTTP request:", err)
+		logger.Logger.Println("Error creating HTTP request:", err)
 		return err
 	}
 	req.Header.Set("content-type", "application/json")
@@ -153,16 +159,16 @@ func postMixApiRequest(endpoint string, cookies *[]*http.Cookie, requestData int
 	resp, errResp := client.Do(req)
 
 	if errResp != nil {
-		fmt.Println("Error executing HTTP request:", err)
+		logger.Logger.Println("Error executing HTTP request:", err)
 		return err
 	} else if resp.StatusCode != http.StatusOK {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			fmt.Println(err.Error())
+			logger.Logger.Println(err.Error())
 		}
 		defer resp.Body.Close()
 
-		fmt.Println("Respond PostMIX error: ", string(body))
+		logger.Logger.Println("Respond PostMIX error: ", string(body))
 
 		if string(body) == "NotAuthorized" {
 			AuthorizeMix(cookies)
@@ -178,7 +184,7 @@ func postMixApiRequest(endpoint string, cookies *[]*http.Cookie, requestData int
 func getMixApiResponse(endpoint string, cookies *[]*http.Cookie, data interface{}) error {
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Logger.Println(err.Error())
 	}
 
 	for _, cookie := range *cookies {
@@ -189,15 +195,15 @@ func getMixApiResponse(endpoint string, cookies *[]*http.Cookie, data interface{
 
 	body, errResp := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Logger.Println(err.Error())
 	}
 	defer resp.Body.Close()
 
 	if errResp != nil {
-		fmt.Println(err.Error())
+		logger.Logger.Println(err.Error())
 		return errResp
 	} else if resp.StatusCode != http.StatusOK {
-		fmt.Println("Respond GetMIX error: ", string(body))
+		logger.Logger.Println("Respond GetMIX error: ", string(body))
 
 		if string(body) == "NotAuthorized" {
 			AuthorizeMix(cookies)
@@ -210,7 +216,7 @@ func getMixApiResponse(endpoint string, cookies *[]*http.Cookie, data interface{
 
 	err = json.Unmarshal(body, &data)
 	if err != nil {
-		fmt.Println("Error decoding JSON string:", err)
+		logger.Logger.Println("Error decoding JSON string:", err)
 		return err
 	}
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"main/config"
+	"main/logger"
 	"main/models"
 	"net/http"
 	"strconv"
@@ -19,19 +20,19 @@ func GetListBf() (nBF []int) {
 	url := config.GlobalConfig.BFJAPI.ApiGetListBF
 	req, getListOfBFErr := http.Get(url)
 	if getListOfBFErr != nil {
-		fmt.Println(getListOfBFErr.Error())
+		logger.Logger.Println(getListOfBFErr.Error())
 		return nil
 	}
 
 	body, readingErr := io.ReadAll(req.Body)
 	if readingErr != nil {
-		fmt.Println(readingErr.Error())
+		logger.Logger.Println(readingErr.Error())
 		return nil
 	}
 
 	jsonError := json.Unmarshal(body, &data)
 	if jsonError != nil {
-		fmt.Println(jsonError.Error())
+		logger.Logger.Println(jsonError.Error())
 		return nil
 	}
 
@@ -76,26 +77,27 @@ func AuthorizeBFJ(cookies *[]*http.Cookie) {
 		req, err := http.Post(config.GlobalConfig.BFJAPI.ApiPostAuthProd, "application/json", bytes.NewBuffer(auth))
 		if err != nil {
 			success = false
-			fmt.Printf("Failed to send authorization request: %v", err)
+			logger.Logger.Printf("Failed to send authorization request: %v", err)
 		}
-		defer req.Body.Close()
 
-		if req.StatusCode != http.StatusOK {
-			success = false
-			bodyBytes, err := io.ReadAll(req.Body)
-			if err != nil {
-				fmt.Printf("Failed to read authorization response body: %v\n", err)
+		if req != nil {
+			defer req.Body.Close()
+
+			if req.StatusCode != http.StatusOK {
+				success = false
+				bodyBytes, err := io.ReadAll(req.Body)
+				if err != nil {
+					logger.Logger.Printf("Failed to read authorization response body: %v\n", err)
+				}
+				logger.Logger.Printf("Rejected authorization request: %s\n", bodyBytes)
 			}
-			fmt.Printf("Rejected authorization request: %s\n", bodyBytes)
-			fmt.Println("Next try to authorize will be in a 5 minutes")
-			time.Sleep(time.Minute * 5)
 		}
 
 		if success {
 			*cookies = req.Cookies()
 			return
 		} else {
-			fmt.Println("Next try to authorize will be in a 5 minutes")
+			logger.Logger.Println("Next try to authorize will be in a 5 minutes")
 			time.Sleep(time.Minute * 5)
 		}
 	}
@@ -104,7 +106,7 @@ func AuthorizeBFJ(cookies *[]*http.Cookie) {
 func getBfjApiResponse(endpoint string, cookies *[]*http.Cookie, data interface{}) error {
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Logger.Println(err.Error())
 	}
 
 	if cookies != nil {
@@ -115,7 +117,7 @@ func getBfjApiResponse(endpoint string, cookies *[]*http.Cookie, data interface{
 
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Logger.Println(err.Error())
 	} else if resp.StatusCode != http.StatusOK {
 		AuthorizeBFJ(cookies)
 		getBfjApiResponse(endpoint, cookies, data)
@@ -124,13 +126,13 @@ func getBfjApiResponse(endpoint string, cookies *[]*http.Cookie, data interface{
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Logger.Println(err.Error())
 	}
 	defer resp.Body.Close()
 
 	err = json.Unmarshal(body, &data)
 	if err != nil {
-		fmt.Println("Error decoding JSON string:", err)
+		logger.Logger.Println("Error decoding JSON string:", err)
 		return err
 	}
 
