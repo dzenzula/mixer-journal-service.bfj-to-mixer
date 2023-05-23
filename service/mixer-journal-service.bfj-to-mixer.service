@@ -4,7 +4,7 @@ After = network.target
 
 [Service]
 Type = simple
-WorkingDirectory = /home/services/mixer-journal-service.bfj-to-mixer.service
+WorkingDirectory = /home/services/mixer-journal-service.bfj-to-mixer
 ExecStart = /home/services/mixer-journal-service.bfj-to-mixer/mixer-journal-service.bfj-to-mixer
 Restart = always
 RestartSec = 30
