@@ -1,5 +1,6 @@
 *.log*
 deploy/*
-/*.yml
+*.yaml
 mixer-journal-service.bfj-to-mixer
 config.json
+tst

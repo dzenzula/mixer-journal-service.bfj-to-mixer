@@ -12,71 +12,85 @@ import (
 	"time"
 )
 
-var currList map[int][]models.Ladle = make(map[int][]models.Ladle)
-var bfjCookies []*http.Cookie
-var mixCookies []*http.Cookie
-var bfjIds map[int][]int = map[int][]int{} //{6: {28112}, 7: {28113}, 8: {28114}, 9: {28115}}
-var mixIds map[int][]int = map[int][]int{} //{1: {10297}, 2: {10294}, 3: {10296}, 4: {10295}}
-var data *cache.Data = cache.ReadYAMLFile(config.GlobalConfig.Path.CachePath)
+var (
+	currList   map[int][]models.Ladle
+	bfjCookies []*http.Cookie
+	mixCookies []*http.Cookie
+	bfjIds     map[int][]int
+	mixIds     map[int][]int
+	data       *cache.Data
+	nBF        []int
+	nMix       []int
+	nBlock     []int
+)
 
 func main() {
 	logger.InitLogger()
-	controllers.AuthorizeBFJ(&bfjCookies)
-	controllers.AuthorizeMix(&mixCookies)
-
-	var nBF []int = controllers.GetListBf()
-	var nMix []int = []int{1, 2, 3, 4}
-
-	controllers.GetLastBFJJournalsData(nBF, &bfjIds)
-	controllers.GetLastMIXJournalsData(nMix, &mixCookies, &mixIds)
-
-	cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, bfjIds, data.Tappings)
-
-	duration := time.Until(time.Now().Truncate(time.Minute).Add(time.Minute))
-	time.Sleep(duration)
+	initialize()
 
 	fmt.Println(time.Now().String())
 
 	for {
-		service(nBF, &bfjIds, &bfjCookies, nMix, &mixIds, &mixCookies)
-
-		ticker := time.NewTicker(time.Until(time.Now().Truncate(time.Minute).Add(time.Minute)))
-		<-ticker.C
+		service()
+		waitForNextMinute()
 	}
 }
 
-func service(nBF []int, bfjIds *map[int][]int, bfjCookies *[]*http.Cookie, nMix []int, mixIds *map[int][]int, mixCookies *[]*http.Cookie) {
+// initialize выполняет начальную настройку.
+func initialize() {
+	currList = make(map[int][]models.Ladle)
+	bfjIds = map[int][]int{}
+	mixIds = map[int][]int{}
+	data = cache.ReadYAMLFile(config.GlobalConfig.Path.CachePath)
+
+	controllers.AuthorizeBFJ(&bfjCookies)
+	controllers.AuthorizeMix(&mixCookies)
+
+	nBF = controllers.GetListBf()
+	nBlock = []int{1, 2}
+	nMix = []int{1, 2, 3, 4}
+
+	controllers.GetLastBFJJournalsData(nBF, &bfjIds)
+	controllers.GetLastBlockJournalsData(nBlock, &mixCookies, &mixIds)
+
+	cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, bfjIds, data.Tappings)
+}
+
+// service является основной функцией, которая выполняет логику обслуживания.
+func service() {
 	now := time.Now().Truncate(time.Minute)
 	if (now.Hour() == 8 && now.Minute() == 0) || (now.Hour() == 20 && now.Minute() == 0) {
 		currList = make(map[int][]models.Ladle)
-		logger.Logger.Println(time.Now().Format("2006-01-02 15:04:05"), "Shift started")
+		fmt.Println(now.Format("2006-01-02 15:04:05"), "Shift started")
 
-		controllers.GetLastBFJJournalsData(nBF, bfjIds)
-		controllers.GetLastMIXJournalsData(nMix, mixCookies, mixIds)
+		controllers.GetLastBFJJournalsData(nBF, &bfjIds)
+		controllers.GetLastBlockJournalsData(nMix, &mixCookies, &mixIds)
 
-		cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, *bfjIds, nil)
+		cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, bfjIds, nil)
 
-		minuteCheck(bfjIds, bfjCookies, mixIds, mixCookies)
+		minuteCheck()
 	} else if now.Second() == 0 {
-		logger.Logger.Println(time.Now().Format("2006-01-02 15:04:05"), "Minute check started")
+		fmt.Println(now.Format("2006-01-02 15:04:05"), "Minute check started")
 
-		minuteCheck(bfjIds, bfjCookies, mixIds, mixCookies)
+		minuteCheck()
 	}
 }
 
-func minuteCheck(bfjIds *map[int][]int, bfjCookies *[]*http.Cookie, mixIds *map[int][]int, mixCookies *[]*http.Cookie) {
+// minuteCheck выполняет проверку каждую минуту.
+func minuteCheck() {
 	data = cache.ReadYAMLFile(config.GlobalConfig.Path.CachePath)
-	for nBf, values := range *bfjIds {
+	for nBf, values := range bfjIds {
 		for _, idJournal := range values {
-			tappings := controllers.GetBFJTappings(idJournal, bfjCookies)
+			tappings := controllers.GetBFJTappings(idJournal, &bfjCookies)
 			for _, tapping := range tappings {
-				sendLadleMovements(nBf, data, tapping, mixIds, mixCookies)
+				sendLadleMovements(nBf, data, tapping, &mixIds, &mixCookies)
 			}
 		}
 	}
 	cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, nil, data.Tappings)
 }
 
+// sendLadleMovements отправляет движения ковшей.
 func sendLadleMovements(nBf int, tIds *cache.Data, tapping models.Tapping, mixIds *map[int][]int, mixCookies *[]*http.Cookie) {
 	if !cache.TappingIdExists(tIds, tapping.ID) {
 		ldlMvm := controllers.PostMixLadleMovement(nBf, tapping)
@@ -95,31 +109,46 @@ func sendLadleMovements(nBf int, tIds *cache.Data, tapping models.Tapping, mixId
 
 			cache.UpdateTappingValue(tIds, tapping.ID, len(tapping.ListLaldes))
 			cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, nil, tIds.Tappings)
+			handleChemicalChanges(tapping.ID, tapping.ListLaldes, mixCookies)
 		}
 	}
+}
 
-	// Обработка изменений в составе химикатов
-	if currList[tapping.ID] == nil {
-		currList[tapping.ID] = tapping.ListLaldes
-	} else if !reflect.DeepEqual(currList[tapping.ID], tapping.ListLaldes) {
-		oldLadles := currList[tapping.ID]
-		currLadles := tapping.ListLaldes
-		changedLadles := []models.Ladle{}
+// handleChemicalChanges обрабатывает изменения в составе химикатов.
+func handleChemicalChanges(tappingID int, currLadles []models.Ladle, mixCookies *[]*http.Cookie) {
+	oldLadles := currList[tappingID]
+	currList[tappingID] = currLadles
 
-		for _, newLadle := range currLadles {
-			for _, currLadle := range oldLadles {
-				currLadle.Chemical.DtUpdate = newLadle.Chemical.DtUpdate
-				if newLadle.Ladle == currLadle.Ladle && !reflect.DeepEqual(newLadle.Chemical, currLadle.Chemical) {
-					changedLadles = append(changedLadles, newLadle)
-					logger.Logger.Println(time.Now().Truncate(time.Minute).String(), newLadle.Ladle, " changed!")
-				}
-			}
-		}
-
-		if len(changedLadles) != 0 {
-			controllers.PostMixChemicalList(changedLadles, mixCookies)
-		}
-
-		currList[tapping.ID] = tapping.ListLaldes
+	changedLadles := findChangedLadles(currLadles, oldLadles)
+	if len(changedLadles) != 0 {
+		controllers.PostMixChemicalList(changedLadles, mixCookies)
 	}
+}
+
+// findChangedLadles находит измененные ковши среди текущего и предыдущего списка ковшей.
+func findChangedLadles(currLadles []models.Ladle, oldLadles []models.Ladle) []models.Ladle {
+	changedLadles := []models.Ladle{}
+	for _, newLadle := range currLadles {
+		if !isLadleInList(newLadle, oldLadles) {
+			changedLadles = append(changedLadles, newLadle)
+			logger.Logger.Println(time.Now().Truncate(time.Minute).String(), newLadle.Ladle, "changed!")
+		}
+	}
+	return changedLadles
+}
+
+// isLadleInList проверяет, содержится ли заданный ковш в списке ковшей.
+func isLadleInList(ladle models.Ladle, ladles []models.Ladle) bool {
+	for _, l := range ladles {
+		if l.Ladle == ladle.Ladle && !reflect.DeepEqual(l.Chemical, ladle.Chemical) {
+			return true
+		}
+	}
+	return false
+}
+
+// waitForNextMinute ждет до следующей минуты.
+func waitForNextMinute() {
+	duration := time.Until(time.Now().Truncate(time.Minute).Add(time.Minute))
+	time.Sleep(duration)
 }
