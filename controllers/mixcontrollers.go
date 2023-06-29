@@ -13,14 +13,14 @@ import (
 	"time"
 )
 
-func GetLastMIXJournalsData(nMIX []int, cookies *[]*http.Cookie, ids *map[int][]int) {
+func GetLastBlockJournalsData(nBlock []int, cookies *[]*http.Cookie, ids *map[int][]int) {
 	var data models.MixJournals
 
 	if *ids != nil {
 		*ids = make(map[int][]int)
 	}
 
-	for _, n := range nMIX {
+	for _, n := range nBlock {
 		endpoint := fmt.Sprintf(config.GlobalConfig.MIXAPI.ApiGetLastJournals, strconv.Itoa(n))
 		err := getMixApiResponse(endpoint, cookies, &data)
 		if err != nil {
@@ -46,18 +46,19 @@ func PostMixChemicalList(listLadles []models.Ladle, cookies *[]*http.Cookie) {
 
 func postMixChemical(listLadles []models.Ladle, cookies *[]*http.Cookie) {
 	endpoint := fmt.Sprintf(config.GlobalConfig.MIXAPI.ApiPostChemical)
-	for nMix := 1; nMix < 5; nMix++ {
+	for nBlock := 1; nBlock <= 2; nBlock++ {
 		for _, ladle := range listLadles {
 			chem := models.ChemicalDTO{
-				NMix:       nMix,
+				//NMix:       nMix,
+				NBlock:     nBlock,
 				Ladle:      ladle.Ladle,
 				NumSample:  int(ladle.Chemical.Proba),
 				NumTaphole: ladle.Chemical.NumTaphole,
 				DT:         checkChemDate(ladle),
-				Si:         float64(ladle.Chemical.Si),
-				Mn:         float64(ladle.Chemical.Mn),
-				S:          float64(ladle.Chemical.S),
-				P:          float64(ladle.Chemical.P),
+				Si:         checkChem(ladle.Chemical.Si),
+				Mn:         checkChem(ladle.Chemical.Mn),
+				S:          checkChem(ladle.Chemical.S),
+				P:          checkChem(ladle.Chemical.P),
 				Belong:     "LadleMovement",
 			}
 			postMixApiRequest(endpoint, cookies, chem)
@@ -68,6 +69,13 @@ func postMixChemical(listLadles []models.Ladle, cookies *[]*http.Cookie) {
 func checkChemDate(ldl models.Ladle) *string {
 	if ldl.Chemical.Dt != "" {
 		return &ldl.Chemical.Dt
+	}
+	return nil
+}
+
+func checkChem(chem float64) *float64 {
+	if chem != 0 {
+		return &chem
 	}
 	return nil
 }
@@ -95,7 +103,7 @@ func PostMixListLadles(listLadles []models.Ladle, ldlMvm models.LadleMovement, m
 				postErr := postMixApiRequest(endpoint, cookies, ldlMvm)
 				if postErr != nil {
 					logger.Logger.Println(postErr.Error())
-					
+
 				}
 
 			}

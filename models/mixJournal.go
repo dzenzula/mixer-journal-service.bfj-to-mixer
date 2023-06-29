@@ -10,7 +10,7 @@ type MixJournals struct {
 		ID                   int     `json:"id"`
 		DT                   string  `json:"dt"`
 		DtAmkr               string  `json:"dtAmkr"`
-		NMix                 string  `json:"nMix"`
+		NBlock               int     `json:"nBlock"`
 		NBrigade             string  `json:"nBrigade"`
 		NShift               string  `json:"nShift"`
 		ProdDaily            int     `json:"prodDaily"`
