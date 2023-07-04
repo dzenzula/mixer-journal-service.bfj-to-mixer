@@ -20,7 +20,6 @@ var (
 	mixIds     map[int][]int
 	data       *cache.Data
 	nBF        []int
-	nMix       []int
 	nBlock     []int
 )
 
@@ -48,7 +47,6 @@ func initialize() {
 
 	nBF = controllers.GetListBf()
 	nBlock = []int{1, 2}
-	nMix = []int{1, 2, 3, 4}
 
 	controllers.GetLastBFJJournalsData(nBF, &bfjIds)
 	controllers.GetLastBlockJournalsData(nBlock, &mixCookies, &mixIds)
@@ -64,7 +62,7 @@ func service() {
 		fmt.Println(now.Format("2006-01-02 15:04:05"), "Shift started")
 
 		controllers.GetLastBFJJournalsData(nBF, &bfjIds)
-		controllers.GetLastBlockJournalsData(nMix, &mixCookies, &mixIds)
+		controllers.GetLastBlockJournalsData(nBlock, &mixCookies, &mixIds)
 
 		cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, bfjIds, nil)
 
