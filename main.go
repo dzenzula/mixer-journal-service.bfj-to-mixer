@@ -110,40 +110,35 @@ func sendLadleMovements(nBf int, tIds *cache.Data, tapping models.Tapping, mixId
 		}
 	}
 
-	handleChemicalChanges(tapping.ID, tapping.ListLaldes, mixCookies)
+	handleChemicalChanges(tapping, tapping.ListLaldes, mixCookies)
 }
 
 // handleChemicalChanges обрабатывает изменения в составе химикатов.
-func handleChemicalChanges(tappingID int, currLadles []models.Ladle, mixCookies *[]*http.Cookie) {
-	oldLadles := currList[tappingID]
-	currList[tappingID] = currLadles
+func handleChemicalChanges(tapping models.Tapping, currLadles []models.Ladle, mixCookies *[]*http.Cookie) {
+	// Обработка изменений в составе химикатов
+	if currList[tapping.ID] == nil {
+		currList[tapping.ID] = tapping.ListLaldes
+	} else if !reflect.DeepEqual(currList[tapping.ID], tapping.ListLaldes) {
+		oldLadles := currList[tapping.ID]
+		currLadles := tapping.ListLaldes
+		changedLadles := []models.Ladle{}
 
-	changedLadles := findChangedLadles(currLadles, oldLadles)
-	if len(changedLadles) != 0 {
-		controllers.PostMixChemicalList(changedLadles, mixCookies)
-	}
-}
-
-// findChangedLadles находит измененные ковши среди текущего и предыдущего списка ковшей.
-func findChangedLadles(currLadles []models.Ladle, oldLadles []models.Ladle) []models.Ladle {
-	changedLadles := []models.Ladle{}
-	for _, newLadle := range currLadles {
-		if !isLadleInList(newLadle, oldLadles) {
-			changedLadles = append(changedLadles, newLadle)
-			logger.Logger.Println(time.Now().Truncate(time.Minute).String(), newLadle.Ladle, "changed!")
+		for _, newLadle := range currLadles {
+			for _, currLadle := range oldLadles {
+				currLadle.Chemical.DtUpdate = newLadle.Chemical.DtUpdate
+				if newLadle.Ladle == currLadle.Ladle && !reflect.DeepEqual(newLadle.Chemical, currLadle.Chemical) {
+					changedLadles = append(changedLadles, newLadle)
+					logger.Logger.Println(time.Now().Truncate(time.Minute).String(), newLadle.Ladle, " changed!")
+				}
+			}
 		}
-	}
-	return changedLadles
-}
 
-// isLadleInList проверяет, содержится ли заданный ковш в списке ковшей.
-func isLadleInList(ladle models.Ladle, ladles []models.Ladle) bool {
-	for _, l := range ladles {
-		if l.Ladle == ladle.Ladle && !reflect.DeepEqual(l.Chemical, ladle.Chemical) {
-			return true
+		if len(changedLadles) != 0 {
+			controllers.PostMixChemicalList(changedLadles, mixCookies)
 		}
+
+		currList[tapping.ID] = tapping.ListLaldes
 	}
-	return false
 }
 
 // waitForNextMinute ждет до следующей минуты.
