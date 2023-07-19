@@ -107,9 +107,10 @@ func sendLadleMovements(nBf int, tIds *cache.Data, tapping models.Tapping, mixId
 
 			cache.UpdateTappingValue(tIds, tapping.ID, len(tapping.ListLaldes))
 			cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, nil, tIds.Tappings)
-			handleChemicalChanges(tapping.ID, tapping.ListLaldes, mixCookies)
 		}
 	}
+
+	handleChemicalChanges(tapping.ID, tapping.ListLaldes, mixCookies)
 }
 
 // handleChemicalChanges обрабатывает изменения в составе химикатов.
