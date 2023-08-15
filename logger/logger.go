@@ -10,7 +10,7 @@ var (
 )
 
 func InitLogger() {
-	file, err := os.OpenFile("logging.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	file, err := os.OpenFile("bfj-to-mix.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}

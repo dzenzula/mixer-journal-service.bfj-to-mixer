@@ -22,7 +22,7 @@
     },
 
     "paths": {
-        "cachePath": "cache.yaml"
+        "cachePath": "bfj-to-mix-cache.yaml"
     },
 
     "auth": {
