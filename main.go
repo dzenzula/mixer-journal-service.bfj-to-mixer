@@ -110,31 +110,42 @@ func sendLadleMovements(nBf int, tIds *cache.Data, tapping models.Tapping, mixId
 		}
 	}
 
-	handleChemicalChanges(tapping, tapping.ListLaldes, mixCookies)
+	handleChemicalChanges(tapping, tapping.ListLaldes, mixCookies, nBf)
 }
 
 // handleChemicalChanges обрабатывает изменения в составе химикатов.
-func handleChemicalChanges(tapping models.Tapping, currLadles []models.Ladle, mixCookies *[]*http.Cookie) {
+func handleChemicalChanges(tapping models.Tapping, currLadles []models.Ladle, mixCookies *[]*http.Cookie, nBf int) {
 	// Обработка изменений в составе химикатов
 	if currList[tapping.ID] == nil {
 		currList[tapping.ID] = tapping.ListLaldes
 	} else if !reflect.DeepEqual(currList[tapping.ID], tapping.ListLaldes) {
 		oldLadles := currList[tapping.ID]
 		currLadles := tapping.ListLaldes
-		changedLadles := []models.Ladle{}
+		changedChem := []models.Ladle{}
+		changedWeight := []models.Ladle{}
 
 		for _, newLadle := range currLadles {
 			for _, currLadle := range oldLadles {
 				currLadle.Chemical.DtUpdate = newLadle.Chemical.DtUpdate
 				if newLadle.Ladle == currLadle.Ladle && !reflect.DeepEqual(newLadle.Chemical, currLadle.Chemical) {
-					changedLadles = append(changedLadles, newLadle)
+					changedChem = append(changedChem, newLadle)
 					logger.Logger.Println(time.Now().Truncate(time.Minute).String(), newLadle.Ladle, " changed!")
+				}
+
+				if newLadle.Ladle == currLadle.Ladle && newLadle.Weight != currLadle.Weight {
+					changedWeight = append(changedWeight, newLadle)
+					logger.Logger.Println(time.Now().Truncate(time.Minute).String(), newLadle.Ladle, " weight changed!")
 				}
 			}
 		}
 
-		if len(changedLadles) != 0 {
-			controllers.PostMixChemicalList(changedLadles, mixCookies)
+		if len(changedChem) != 0 {
+			controllers.PostMixChemicalList(changedChem, mixCookies)
+		}
+		
+		if len(changedWeight) != 0 {
+			ldlMvm := controllers.PostMixLadleMovement(nBf, tapping)
+			controllers.PostMixListLadles(changedWeight, ldlMvm, &mixIds, mixCookies)
 		}
 
 		currList[tapping.ID] = tapping.ListLaldes
