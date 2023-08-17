@@ -99,22 +99,23 @@ func sendLadleMovements(nBf int, tIds *cache.Data, tapping models.Tapping, mixId
 		tVal := cache.FindTappingIdValue(tIds, tapping.ID)
 		if len(tapping.ListLaldes) != tVal {
 			numMissingLadles := len(tapping.ListLaldes) - tVal
-			missingLadles := tapping.ListLaldes[len(tapping.ListLaldes)-numMissingLadles:]
-
-			ldlMvm := controllers.PostMixLadleMovement(nBf, tapping)
-			controllers.PostMixListLadles(missingLadles, ldlMvm, mixIds, mixCookies)
-			controllers.PostMixChemicalList(missingLadles, mixCookies)
+			if numMissingLadles > 0 {
+				missingLadles := tapping.ListLaldes[len(tapping.ListLaldes)-numMissingLadles:]
+				ldlMvm := controllers.PostMixLadleMovement(nBf, tapping)
+				controllers.PostMixListLadles(missingLadles, ldlMvm, mixIds, mixCookies)
+				controllers.PostMixChemicalList(missingLadles, mixCookies)
+			}
 
 			cache.UpdateTappingValue(tIds, tapping.ID, len(tapping.ListLaldes))
 			cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, nil, tIds.Tappings)
 		}
 	}
 
-	handleChemicalChanges(tapping, tapping.ListLaldes, mixCookies, nBf)
+	handleChemicalChanges(tapping, mixCookies, nBf)
 }
 
 // handleChemicalChanges обрабатывает изменения в составе химикатов.
-func handleChemicalChanges(tapping models.Tapping, currLadles []models.Ladle, mixCookies *[]*http.Cookie, nBf int) {
+func handleChemicalChanges(tapping models.Tapping, mixCookies *[]*http.Cookie, nBf int) {
 	// Обработка изменений в составе химикатов
 	if currList[tapping.ID] == nil {
 		currList[tapping.ID] = tapping.ListLaldes
@@ -129,7 +130,7 @@ func handleChemicalChanges(tapping models.Tapping, currLadles []models.Ladle, mi
 				currLadle.Chemical.DtUpdate = newLadle.Chemical.DtUpdate
 				if newLadle.Ladle == currLadle.Ladle && !reflect.DeepEqual(newLadle.Chemical, currLadle.Chemical) {
 					changedChem = append(changedChem, newLadle)
-					logger.Logger.Println(time.Now().Truncate(time.Minute).String(), newLadle.Ladle, " changed!")
+					logger.Logger.Println(time.Now().Truncate(time.Minute).String(), newLadle.Ladle, " chemical changed!")
 				}
 
 				if newLadle.Ladle == currLadle.Ladle && newLadle.Weight != currLadle.Weight {
@@ -142,7 +143,7 @@ func handleChemicalChanges(tapping models.Tapping, currLadles []models.Ladle, mi
 		if len(changedChem) != 0 {
 			controllers.PostMixChemicalList(changedChem, mixCookies)
 		}
-		
+
 		if len(changedWeight) != 0 {
 			ldlMvm := controllers.PostMixLadleMovement(nBf, tapping)
 			controllers.PostMixListLadles(changedWeight, ldlMvm, &mixIds, mixCookies)

@@ -66,7 +66,22 @@ func GetBFJTappings(journalId int, cookies *[]*http.Cookie) (tappingIds []models
 	if err != nil {
 		return nil
 	}
+	data = tappingFilterKC(data)
 	return data
+}
+
+func tappingFilterKC(tappings []models.Tapping) []models.Tapping {
+	for i, tapping := range tappings {
+		var ladlesKC []models.Ladle
+		for _, ladle := range tapping.ListLaldes {
+			if ladle.Destination == "КЦ" {
+				ladlesKC = append(ladlesKC, ladle)
+			}
+		}
+		tappings[i].ListLaldes = nil
+		tappings[i].ListLaldes = ladlesKC
+	}
+	return tappings
 }
 
 func AuthorizeBFJ(cookies *[]*http.Cookie) {
