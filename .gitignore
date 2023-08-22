@@ -2,6 +2,6 @@
 deploy/*
 *.yaml
 mixer-journal-service.bfj-to-mixer
-config.json
+/config.json
 tst
 cache/*.yaml
