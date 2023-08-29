@@ -124,11 +124,11 @@ func sendLadleMovements(nBf int, tIds *cache.Data, tapping models.Tapping, mixId
 		}
 	}
 
-	handleChemicalChanges(tapping, mixCookies, nBf)
+	handleChemicalChanges(tapping, mixCookies, nBf, mixIds)
 }
 
 // handleChemicalChanges обрабатывает изменения в составе химикатов.
-func handleChemicalChanges(tapping models.Tapping, mixCookies *[]*http.Cookie, nBf int) {
+func handleChemicalChanges(tapping models.Tapping, mixCookies *[]*http.Cookie, nBf int, mixIds []int) {
 	// Обработка изменений в составе химикатов
 	if currList[tapping.ID] == nil {
 		currList[tapping.ID] = tapping.ListLaldes
@@ -153,13 +153,14 @@ func handleChemicalChanges(tapping models.Tapping, mixCookies *[]*http.Cookie, n
 			}
 		}
 
-		if len(changedChem) != 0 {
-			controllers.PostMixChemicalList(changedChem, mixCookies)
-		}
+		//Commented for test
+		//if len(changedChem) != 0 {
+			//controllers.PostMixChemicalList(changedChem, mixCookies)
+		//}
 
 		if len(changedWeight) != 0 {
-			//ldlMvm := controllers.PostMixLadleMovement(nBf, tapping)
-			//controllers.PostMixListLadles(changedWeight, ldlMvm, &mixIds, mixCookies)
+			ldlMvm := controllers.PostMixLadleMovement(nBf, tapping)
+			controllers.PostMixListLadles(changedWeight, ldlMvm, mixIds, mixCookies)
 		}
 
 		currList[tapping.ID] = tapping.ListLaldes
