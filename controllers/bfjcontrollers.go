@@ -53,7 +53,7 @@ func GetLastBFJJournalsData(nBF []int, ids *map[int][]int) {
 			return
 		}
 
-		for i := 0; i < 1; i++ {
+		for i := 0; i < 2; i++ {
 			(*ids)[n] = append((*ids)[n], data.DataJournals[i].ID)
 		}
 	}

@@ -28,7 +28,7 @@ func GetLastBlockJournalsData(nBlock []int, cookies *[]*http.Cookie, ids *map[in
 		}
 
 		if len(data.DataJournals) > 0 {
-			for i := 0; i < 1; i++ {
+			for i := 0; i < 2; i++ {
 				(*ids)[n] = append((*ids)[n], data.DataJournals[i].ID)
 			}
 		}
@@ -92,19 +92,15 @@ func PostMixLadleMovement(nBf int, tapping models.Tapping) models.LadleMovement 
 	return ldlMvm
 }
 
-func PostMixListLadles(listLadles []models.Ladle, ldlMvm models.LadleMovement, mixIds *map[int][]int, cookies *[]*http.Cookie) {
+func PostMixListLadles(listLadles []models.Ladle, ldlMvm models.LadleMovement, mixIds []int, cookies *[]*http.Cookie) {
 	for i := 0; i < len(listLadles); i++ {
-		for _, keys := range *mixIds {
+		for _, id := range mixIds {
 			ldlMvm.LadleTapping = listLadles[i].Ladle
 			ldlMvm.MassCastIron = int(listLadles[i].Weight)
-
-			for _, key := range keys {
-				endpoint := fmt.Sprintf(config.GlobalConfig.MIXAPI.ApiPostLadleMovement, strconv.Itoa(key))
-				postErr := postMixApiRequest(endpoint, cookies, ldlMvm)
-				if postErr != nil {
-					logger.Logger.Println(postErr.Error())
-
-				}
+			endpoint := fmt.Sprintf(config.GlobalConfig.MIXAPI.ApiPostLadleMovement, strconv.Itoa(id))
+			postErr := postMixApiRequest(endpoint, cookies, ldlMvm)
+			if postErr != nil {
+				logger.Logger.Println(postErr.Error())
 
 			}
 		}

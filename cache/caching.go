@@ -9,7 +9,7 @@ import (
 )
 
 type Data struct {
-	Ids      []int         `yaml:"ids"`
+	Ids      map[int][]int `yaml:"ids"`
 	Tappings []map[int]int `yaml:"tappings"`
 }
 
@@ -50,9 +50,7 @@ func WriteYAMLFile(filename string, ids map[int][]int, tappings []map[int]int) {
 
 	if len(ids) > 0 {
 		config.Ids = nil
-		for _, values := range ids {
-			config.Ids = append(config.Ids, values...)
-		}
+		config.Ids = ids
 	}
 
 	if len(tappings) > 0 {
@@ -97,9 +95,11 @@ func isFileExist(filename string) error {
 }
 
 func IdExists(config *Data, id int) bool {
-	for _, existingID := range config.Ids {
-		if existingID == id {
-			return true
+	for _, existingIDs := range config.Ids {
+		for _, existingID := range existingIDs {
+			if existingID == id {
+				return true
+			}
 		}
 	}
 	return false
@@ -108,16 +108,18 @@ func IdExists(config *Data, id int) bool {
 func DeleteIds(filename string, yaml *Data) *Data {
 	ids := make(map[int][]int)
 	if yaml != nil {
-		yaml.Ids = []int{}
-		WriteYAMLFile(filename, ids, nil)
+		yaml.Ids = ids
+		WriteYAMLFile(filename, ids, yaml.Tappings)
 	}
 	return yaml
 }
 
 func (y *Data) ReplaceId(oldId, newId int) error {
-	for i, id := range y.Ids {
-		if id == oldId {
-			y.Ids[i] = newId
+	for i, existingIDs := range y.Ids {
+		for j, id := range existingIDs {
+			if id == oldId {
+				y.Ids[i][j] = newId
+			}
 		}
 	}
 	return nil

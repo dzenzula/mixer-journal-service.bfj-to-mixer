@@ -13,14 +13,15 @@ import (
 )
 
 var (
-	currList   map[int][]models.Ladle
-	bfjCookies []*http.Cookie
-	mixCookies []*http.Cookie
-	bfjIds     map[int][]int
-	mixIds     map[int][]int
-	data       *cache.Data
-	nBF        []int
-	nBlock     []int
+	currList         map[int][]models.Ladle
+	bfjCookies       []*http.Cookie
+	mixCookies       []*http.Cookie
+	bfjIds           map[int][]int
+	mixIds           map[int][]int
+	journalRelations map[int][]int
+	data             *cache.Data
+	nBF              []int
+	nBlock           []int
 )
 
 func main() {
@@ -40,6 +41,7 @@ func initialize() {
 	currList = make(map[int][]models.Ladle)
 	bfjIds = map[int][]int{}
 	mixIds = map[int][]int{}
+	journalRelations = map[int][]int{}
 	data = cache.ReadYAMLFile(config.GlobalConfig.Path.CachePath)
 
 	controllers.AuthorizeBFJ(&bfjCookies)
@@ -51,7 +53,9 @@ func initialize() {
 	controllers.GetLastBFJJournalsData(nBF, &bfjIds)
 	controllers.GetLastBlockJournalsData(nBlock, &mixCookies, &mixIds)
 
-	cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, bfjIds, data.Tappings)
+	journalRelations = createJournalRelations(bfjIds, mixIds)
+
+	cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, journalRelations, data.Tappings)
 }
 
 // service является основной функцией, которая выполняет логику обслуживания.
@@ -63,6 +67,8 @@ func service() {
 
 		controllers.GetLastBFJJournalsData(nBF, &bfjIds)
 		controllers.GetLastBlockJournalsData(nBlock, &mixCookies, &mixIds)
+
+		journalRelations = createJournalRelations(bfjIds, mixIds)
 
 		cache.WriteYAMLFile(config.GlobalConfig.Path.CachePath, bfjIds, nil)
 
@@ -79,9 +85,16 @@ func minuteCheck() {
 	data = cache.ReadYAMLFile(config.GlobalConfig.Path.CachePath)
 	for nBf, values := range bfjIds {
 		for _, idJournal := range values {
+			relatedMixIds, exists := journalRelations[idJournal]
+			if !exists {
+				continue
+			}
+
+			fmt.Println(relatedMixIds)
+
 			tappings := controllers.GetBFJTappings(idJournal, &bfjCookies)
 			for _, tapping := range tappings {
-				sendLadleMovements(nBf, data, tapping, &mixIds, &mixCookies)
+				sendLadleMovements(nBf, data, tapping, relatedMixIds, &mixCookies)
 			}
 		}
 	}
@@ -89,7 +102,7 @@ func minuteCheck() {
 }
 
 // sendLadleMovements отправляет движения ковшей.
-func sendLadleMovements(nBf int, tIds *cache.Data, tapping models.Tapping, mixIds *map[int][]int, mixCookies *[]*http.Cookie) {
+func sendLadleMovements(nBf int, tIds *cache.Data, tapping models.Tapping, mixIds []int, mixCookies *[]*http.Cookie) {
 	if !cache.TappingIdExists(tIds, tapping.ID) {
 		ldlMvm := controllers.PostMixLadleMovement(nBf, tapping)
 		controllers.PostMixListLadles(tapping.ListLaldes, ldlMvm, mixIds, mixCookies)
@@ -145,8 +158,8 @@ func handleChemicalChanges(tapping models.Tapping, mixCookies *[]*http.Cookie, n
 		}
 
 		if len(changedWeight) != 0 {
-			ldlMvm := controllers.PostMixLadleMovement(nBf, tapping)
-			controllers.PostMixListLadles(changedWeight, ldlMvm, &mixIds, mixCookies)
+			//ldlMvm := controllers.PostMixLadleMovement(nBf, tapping)
+			//controllers.PostMixListLadles(changedWeight, ldlMvm, &mixIds, mixCookies)
 		}
 
 		currList[tapping.ID] = tapping.ListLaldes
@@ -157,4 +170,19 @@ func handleChemicalChanges(tapping models.Tapping, mixCookies *[]*http.Cookie, n
 func waitForNextMinute() {
 	duration := time.Until(time.Now().Truncate(time.Minute).Add(time.Minute))
 	time.Sleep(duration)
+}
+
+func createJournalRelations(bfjIds map[int][]int, mixIds map[int][]int) map[int][]int {
+	journalRelations := make(map[int][]int)
+
+	for _, valuesA := range bfjIds {
+		for _, valuesB := range mixIds {
+			for i, valueA := range valuesA {
+				journalRelations[valueA] = append(journalRelations[valueA], valuesB[i%len(valuesB)])
+			}
+		}
+	}
+
+	fmt.Println(journalRelations)
+	return journalRelations
 }
