@@ -26,7 +26,8 @@ func ReadYAMLFile(filename string) *Data {
 	err = yaml.Unmarshal(data, &config)
 	if err != nil {
 		logger.Logger.Println(err.Error())
-		return nil
+		os.WriteFile(filename, nil, 0644)
+		return &config
 	}
 
 	return &config
