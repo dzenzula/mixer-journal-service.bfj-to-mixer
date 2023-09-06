@@ -7,7 +7,7 @@ type LadleMovement struct {
 	LadleTapping   string `json:"ladleTapping"`
 	DtCloseTaphole string `json:"dtCloseTaphole"`
 	//DtPlum            string `json:"dtPlum"`
-	MassCastIron      int `json:"massCastIron"`
-	TemperExhaustIron int `json:"temperExhaustIron"`
+	MassCastIron      float64 `json:"massCastIron"`
+	TemperExhaustIron int     `json:"temperExhaustIron"`
 	//DtEndDrainingDc   string `json:"dtEndDrainingDc"`
 }

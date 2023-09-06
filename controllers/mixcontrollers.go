@@ -96,7 +96,7 @@ func PostMixListLadles(listLadles []models.Ladle, ldlMvm models.LadleMovement, m
 	for i := 0; i < len(listLadles); i++ {
 		for _, id := range mixIds {
 			ldlMvm.LadleTapping = listLadles[i].Ladle
-			ldlMvm.MassCastIron = int(listLadles[i].Weight)
+			ldlMvm.MassCastIron = listLadles[i].Weight
 			endpoint := fmt.Sprintf(config.GlobalConfig.MIXAPI.ApiPostLadleMovement, strconv.Itoa(id))
 			postErr := postMixApiRequest(endpoint, cookies, ldlMvm)
 			if postErr != nil {
