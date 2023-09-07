@@ -106,7 +106,7 @@ func sendLadleMovements(nBf int, tIds *cache.Data, tapping models.Tapping, mixId
 	if !cache.TappingIdExists(tIds, tapping.ID) {
 		ldlMvm := controllers.PostMixLadleMovement(nBf, tapping)
 		controllers.PostMixListLadles(tapping.ListLaldes, ldlMvm, mixIds, mixCookies)
-		controllers.PostMixChemical(tapping, mixCookies)
+		//controllers.PostMixChemical(tapping, mixCookies)
 		tIds.Tappings = append(tIds.Tappings, map[int]int{tapping.ID: len(tapping.ListLaldes)})
 	} else {
 		tVal := cache.FindTappingIdValue(tIds, tapping.ID)
@@ -116,7 +116,7 @@ func sendLadleMovements(nBf int, tIds *cache.Data, tapping models.Tapping, mixId
 				missingLadles := tapping.ListLaldes[len(tapping.ListLaldes)-numMissingLadles:]
 				ldlMvm := controllers.PostMixLadleMovement(nBf, tapping)
 				controllers.PostMixListLadles(missingLadles, ldlMvm, mixIds, mixCookies)
-				controllers.PostMixChemicalList(missingLadles, mixCookies)
+				//controllers.PostMixChemicalList(missingLadles, mixCookies)
 			}
 
 			cache.UpdateTappingValue(tIds, tapping.ID, len(tapping.ListLaldes))
